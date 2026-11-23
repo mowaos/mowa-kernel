@@ -193,10 +193,58 @@ order (0, 1, 2, …), and every session's history must be complete from version 
 
 A verifier checks each step with the open kernel of the recorded version: recompute
 `resultHash`, check the chain, then run the step and compare the commit. The browser
-host produces this format (`exportVerificationBundle`, section 7). The format is
+host produces this format (`exportVerificationBundle`, section 8). The format is
 version 1 and may still change before 1.0; a standalone verification tool will follow.
 
-## 7. The browser host
+## 7. AI agents
+
+AI agents (a model that reads a case and proposes the next step, for example through an
+MCP server) are hosts' most demanding callers: they act fast, they can be wrong, and
+the text they read (emails, documents, web pages) can contain instructions written to
+manipulate them. The kernel limits what a wrong or manipulated agent can do, but only
+if the host keeps the agent to the role of **proposing events**. A host that lets
+agents act MUST follow these rules.
+
+1. **The host sets the actor.** The agent's identity comes from how it is connected
+   (its credential or MCP session), and the host sets `actor.type` (for example `AI`) and
+   `actor.id` (for example `agent:drafter`) from it. An agent MUST NOT be able to choose
+   or change its actor.
+2. **Agents never supply facts.** Facts come from the host's fact providers, computed
+   when the step runs (section 2). An agent proposes only an event type, a payload and an
+   idempotency key. If an agent's own findings should influence a flow, the host records
+   them as separate facts in their own namespace (for example
+   `ai:invoice_extracted = PRESENT`), which a flow can route on without treating them as
+   verified.
+3. **The host sets the time** (`ctx.asOf`), as for every caller.
+4. **Record the model.** The event `source` SHOULD identify the model and the prompt or
+   agent version (for example `model:<name>@<version>/prompt:<id>`). It is covered by the
+   event hash, so every decision records which model proposed it.
+5. **Effects with outside consequences need a person's step.** Sending, paying,
+   submitting or deleting MUST NOT be reachable by agent transitions alone. Put a node
+   between the agent's proposal and the effect, with a transition only a human actor type
+   may take (flow-spec.md, section 12). The approval is then a decision in the audit
+   chain, with the approver recorded, not just a status on an outbox record.
+6. **Agents cannot approve.** Confirming effects (section 5) and taking approval
+   transitions MUST NOT be possible over an agent's connection.
+7. **Answer briefly.** Tell an agent its case's current state, the event types its actor
+   type may propose there, the names of facts still missing, and the outcome of its last
+   proposal. Do not send whole flows or audit logs: they cost context and reveal more than
+   the agent needs.
+
+With these rules, an agent that is wrong or manipulated can at most propose a
+transition its actor type is allowed to take. That transition must still pass guards on
+facts the agent cannot forge, and its effects wait for a person. The damage is bounded
+by the flow, not by the model's judgement.
+
+Several agents working on the same cases need one authoritative writer (section 3):
+a server host, reached through a remote endpoint. Local single-agent setups can use a
+local host.
+
+The kernel supports the record-keeping and human-oversight duties that rules such as
+the EU AI Act place on high-risk systems; meeting them is a property of the whole system
+that the host and its operator run, not of the kernel alone.
+
+## 8. The browser host
 
 `@mowaos/host-browser` implements this contract for browsers and browser extensions:
 
@@ -208,6 +256,7 @@ version 1 and may still change before 1.0; a standalone verification tool will f
 | 4 | Duplicate lookup with intent-hash comparison in `MowaBrowserHost` |
 | 5 | `OutboxDispatcher`: handlers per effect kind, backoff with jitter, dead-letter queue, unhandled-kind grace period, `confirmEffect` / `rejectEffect` / `requeueEffect` |
 | 6 | Flows are stored by hash; every step's inputs and commit in the `steps` store (`getSteps`); `exportVerificationBundle` writes section 6.1's format |
+| 7 | Not built in: the browser host has no agent connection. Code that lets an agent call it must apply section 7, in particular setting the actor and the facts itself |
 
 Known limits in 0.5.0:
 
@@ -219,7 +268,7 @@ Known limits in 0.5.0:
 - Confirmations and rejections update the outbox record only; flows that need them in
   the audit chain should model them as events (section 5).
 
-## 8. Conformance
+## 9. Conformance
 
 The browser host's behaviour is tested in `packages/host-browser/tests/host.test.mjs`
 (atomic commit, serialised concurrent calls, duplicate requests and key reuse, guard

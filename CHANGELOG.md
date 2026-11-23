@@ -21,6 +21,11 @@ rename below; the release date is set when the tag is pushed.
   (`docs/vectors/kernel-conformance.json`, `docs/vectors/flow-validation.json`) run in CI
   against the kernel, an independent JavaScript implementation of the hashing rules, and
   the schema.
+- **AI agents:** the host contract (section 7) sets the rules for hosts that let AI
+  agents act: the host sets the actor, facts and time; agents only propose events;
+  effects with outside consequences need a person's step. The flow specification
+  (section 12) adds the pattern "AI proposes, a person approves", with conformance
+  cases.
 - **Flows: unknown fields inside a guard are now rejected** (`BAD_REQUEST`), like
   everywhere else in a flow. Before, they were silently dropped from the flow hash.
   Flows without extra guard fields are unaffected, and no hash changes.

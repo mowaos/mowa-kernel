@@ -183,7 +183,8 @@ empty or only whitespace.
 
 `SYSTEM` (the host acting on its own) and `AI` (a model proposing an event) are
 reserved names by convention. The kernel treats them like any other type: a flow must
-list them to allow them.
+list them to allow them. Rules for hosts that let AI agents act are in
+host-contract.md, section 7; the flow side is section 12 below.
 
 ## 8. Lifecycle
 
@@ -266,7 +267,63 @@ defaults are applied (hashing-spec.md, section 4.1).
   hashes; sessions started on one cannot advance on the other. Authors SHOULD never
   reuse a version label for different content.
 
-## 12. Conformance
+## 12. Patterns
+
+### 12.1 AI proposes, a person approves
+
+When an AI agent may prepare an action with outside consequences (sending an email,
+submitting a form, paying), give the agent a transition to a **waiting node**, and put
+the effect behind a transition that only a person can take:
+
+```json
+{
+  "submitted": {
+    "id": "submitted", "type": "intake", "tier": "T1",
+    "transitions": {
+      "draft_reply": {
+        "to": "draft_ready",
+        "allowedActors": ["AI"],
+        "guard": { "op": "none_with_status", "prefix": "doc:", "status": "CONFLICTED" },
+        "onGuardFail": "held"
+      }
+    }
+  },
+  "draft_ready": {
+    "id": "draft_ready", "type": "approval", "tier": "T2",
+    "transitions": {
+      "approve_reply": { "to": "replied", "allowedActors": ["REVIEWER"] },
+      "reject_reply": { "to": "submitted", "allowedActors": ["REVIEWER"] }
+    }
+  },
+  "replied": {
+    "id": "replied", "type": "outcome", "tier": "T0", "terminal": true,
+    "onEnter": [{ "kind": "send_reply", "payload": { "channel": "email" } }]
+  }
+}
+```
+
+- The agent can only move the case to `draft_ready`, which emits nothing. Its draft
+  travels in the event payload and is recorded in the event hash.
+- The guard reads facts supplied by the host, so the agent cannot talk its way past it;
+  if documents conflict, the case goes to `held` for a person.
+- `approve_reply` allows only `REVIEWER`. An `AI` actor trying it gets `UNAUTHORIZED`.
+- The approval is itself a step in the audit chain, recording who approved and when;
+  `send_reply` is emitted only then.
+
+The kernel permits by actor type, so this pattern guarantees that a person approved,
+not that it was a different person from the one who prepared the draft.
+
+The conformance cases "AI proposes, a person approves" and "an agent's proposal still
+passes guards on host facts" check this pattern.
+
+### 12.2 Exceptions go to a person
+
+Use a guard with `onGuardFail` to route anything unexpected (a failed check, a
+conflict, a missing document reported as `MISSING`) to a review node, rather than
+refusing the event. The case keeps moving, the exception is recorded with
+`guardFailed: true`, and a person decides.
+
+## 13. Conformance
 
 An implementation conforms to this specification if, for every case in
 [`vectors/flow-validation.json`](vectors/flow-validation.json), it returns the expected

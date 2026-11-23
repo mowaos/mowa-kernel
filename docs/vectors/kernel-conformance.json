@@ -95,8 +95,53 @@
               "SYSTEM",
               "REVIEWER"
             ]
+          },
+          "draft_reply": {
+            "to": "draft_ready",
+            "allowedActors": [
+              "AI"
+            ],
+            "guard": {
+              "op": "none_with_status",
+              "prefix": "doc:",
+              "status": "CONFLICTED"
+            },
+            "onGuardFail": "held"
           }
         }
+      },
+      "draft_ready": {
+        "id": "draft_ready",
+        "type": "approval",
+        "tier": "T2",
+        "transitions": {
+          "approve_reply": {
+            "to": "replied",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          },
+          "reject_reply": {
+            "to": "submitted",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "replied": {
+        "id": "replied",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true,
+        "onEnter": [
+          {
+            "kind": "send_reply",
+            "payload": {
+              "channel": "email"
+            }
+          }
+        ]
       },
       "held": {
         "id": "held",
@@ -1190,6 +1235,150 @@
           },
           "expect": {
             "dedupKeyDiffersFromStep": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI proposes, a person approves",
+      "spec": "flow-spec.md#12-patterns",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "event": {
+            "type": "SUBMITTED",
+            "actor": {
+              "type": "AI",
+              "id": "agent:drafter"
+            },
+            "source": "model:example-model@2026-11/prompt:reply-v3"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "START_UNAUTHORIZED",
+            "error": {
+              "actor": "AI"
+            }
+          }
+        },
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "draft_reply",
+            "actor": {
+              "type": "AI",
+              "id": "agent:drafter"
+            },
+            "source": "model:example-model@2026-11/prompt:reply-v3",
+            "idempotencyKey": "k-draft",
+            "payload": {
+              "draftId": "d-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "VERIFIED",
+              "doc:packing": "VERIFIED"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "draft_ready",
+            "version": 1,
+            "guardFailed": false,
+            "outbox": []
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve_reply",
+            "actor": {
+              "type": "AI",
+              "id": "agent:drafter"
+            },
+            "source": "model:example-model@2026-11/prompt:reply-v3",
+            "idempotencyKey": "k-self-approve"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "UNAUTHORIZED",
+            "error": {
+              "state": "draft_ready",
+              "key": "approve_reply",
+              "actor": "AI"
+            }
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve_reply",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "user:alice"
+            },
+            "source": "ui",
+            "idempotencyKey": "k-approve"
+          },
+          "expect": {
+            "status": "OK",
+            "state": "replied",
+            "version": 2,
+            "fromState": "draft_ready",
+            "outbox": [
+              "send_reply"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "an agent's proposal still passes guards on host facts",
+      "spec": "flow-spec.md#12-patterns",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "draft_reply",
+            "actor": {
+              "type": "AI",
+              "id": "agent:drafter"
+            },
+            "source": "model:example-model@2026-11/prompt:reply-v3",
+            "idempotencyKey": "k-draft"
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "CONFLICTED",
+              "doc:packing": "VERIFIED"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "held",
+            "version": 1,
+            "guardFailed": true,
+            "outbox": []
           }
         }
       ]

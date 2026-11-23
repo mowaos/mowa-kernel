@@ -95,8 +95,53 @@
               "SYSTEM",
               "REVIEWER"
             ]
+          },
+          "draft_reply": {
+            "to": "draft_ready",
+            "allowedActors": [
+              "AI"
+            ],
+            "guard": {
+              "op": "none_with_status",
+              "prefix": "doc:",
+              "status": "CONFLICTED"
+            },
+            "onGuardFail": "held"
           }
         }
+      },
+      "draft_ready": {
+        "id": "draft_ready",
+        "type": "approval",
+        "tier": "T2",
+        "transitions": {
+          "approve_reply": {
+            "to": "replied",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          },
+          "reject_reply": {
+            "to": "submitted",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "replied": {
+        "id": "replied",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true,
+        "onEnter": [
+          {
+            "kind": "send_reply",
+            "payload": {
+              "channel": "email"
+            }
+          }
+        ]
       },
       "held": {
         "id": "held",

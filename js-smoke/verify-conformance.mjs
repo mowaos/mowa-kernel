@@ -169,6 +169,19 @@ test("docs: the flow-spec overview example is valid", () => {
   assert.ok(valid(schema, flow));
 });
 
+test("docs: the flow-spec AI approval pattern is the flow the conformance cases test", () => {
+  const spec = readFileSync(new URL("../docs/flow-spec.md", import.meta.url), "utf8");
+  const nodes = JSON.parse(spec.split("### 12.1")[1].split("```json")[1].split("```")[0]);
+  for (const [key, node] of Object.entries(nodes)) {
+    const tested = conformance.flow.nodes[key];
+    assert.ok(tested, `node ${key} exists in the conformance flow`);
+    const { transitions = {}, ...rest } = node;
+    const { transitions: testedTransitions = {}, ...testedRest } = tested;
+    assert.deepEqual(rest, testedRest, `node ${key}`);
+    for (const [event, t] of Object.entries(transitions)) assert.deepEqual(t, testedTransitions[event], `${key}.${event}`);
+  }
+});
+
 test("schema: the conformance flow and the hashing example flow match the schema", () => {
   assert.ok(valid(schema, conformance.flow));
   assert.ok(valid(schema, read("../docs/vectors/basic-approval.json").inputs.flow));
