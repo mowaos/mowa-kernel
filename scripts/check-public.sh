@@ -18,12 +18,21 @@ for f in LICENSE NOTICE README.md SECURITY.md TRADEMARKS.md CHANGELOG.md docs/ha
   [ -f "$f" ] || err "missing $f"
 done
 
+# Every published package (each crate, the npm package) ships LICENSE and NOTICE,
+# identical to the ones at the root (Apache-2.0, section 4).
+for d in crates/* packages/host-browser; do
+  for f in LICENSE NOTICE; do
+    cmp -s "$f" "$d/$f" || err "$d/$f is missing or differs from ./$f"
+  done
+done
+grep -q '"NOTICE"' packages/host-browser/package.json || err "packages/host-browser/package.json files must list NOTICE"
+
 # 2. Build outputs and secrets must not be tracked.
 echo "$files" | grep -E '(^|/)(target|pkg|pkg-web|dist|node_modules)/' && err "build output is tracked"
 echo "$files" | grep -E '\.(wasm|tgz|tar\.gz|pem|key|p12)$|(^|/)\.env' && err "binary, archive, key or .env file is tracked"
 
 # 3. Contents: absolute local paths, secrets, contradictory licence wording.
-scan() { echo "$files" | grep -vE '^(Cargo\.lock|LICENSE|scripts/check-public\.sh)$' | xargs -d '\n' grep -nIE "$1" -- 2>/dev/null || true; }
+scan() { echo "$files" | grep -vE '^(Cargo\.lock|(.*/)?LICENSE|scripts/check-public\.sh)$' | xargs -d '\n' grep -nIE "$1" -- 2>/dev/null || true; }
 hits=$(scan '(/home/[a-z]|/media/[a-z]|/Users/[A-Za-z]|[A-Z]:\\\\Users)'); [ -n "$hits" ] && { echo "$hits"; err "absolute local path found"; }
 hits=$(scan '(-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-)'); [ -n "$hits" ] && { echo "$hits"; err "possible secret found"; }
 hits=$(scan '[Aa]ll rights reserved'); [ -n "$hits" ] && { echo "$hits"; err "'All rights reserved' contradicts Apache-2.0"; }

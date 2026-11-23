@@ -42,7 +42,8 @@ rename below; the release date is set when the tag is pushed.
   release build is byte-identical wherever it is built (and contains no local paths).
 - **Docs:** README, [hashing specification](docs/hashing-spec.md) with a test vector
   that CI recomputes without kernel code.
-- **Packaging:** Apache-2.0 `LICENSE`, crate and npm metadata, CI and release workflows.
+- **Packaging:** Apache-2.0 `LICENSE` and `NOTICE`, shipped inside every crate and the npm
+  package; crate and npm metadata, CI and release workflows.
   Built WASM is no longer committed; it is attached to each release with `SHA256SUMS`.
 
 ## 0.4.3 (2026-11-17)
