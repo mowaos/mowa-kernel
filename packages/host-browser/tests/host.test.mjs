@@ -747,4 +747,54 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     });
     await assert.rejects(host.exportVerificationBundle(["NOPE"]), /not found/);
   });
+
+  it("14. the host decides and stores a snapshot of its inputs, not the caller's live objects", async () => {
+    // Storage that waits before writing, as IndexedDB does while it opens the database.
+    class SlowStorage extends MemoryStorage {
+      async atomicCommit(...args) {
+        await new Promise((r) => setTimeout(r, 5));
+        return super.atomicCommit(...args);
+      }
+    }
+    const storage = new SlowStorage();
+    const host = new MowaBrowserHost(kernel, { storage });
+    const flow = sampleFlow();
+    const { flowHash } = await host.installFlow(flow);
+    flow.nodes.INTAKE.type = "changed after install";
+    assert.equal((await storage.getFlow(flowHash)).nodes.INTAKE.type, "t", "installed flow is a snapshot");
+
+    // 1. The caller changes its event while the commit is waiting on storage.
+    const event = {
+      id: "EVT_SNAP", type: "INITIALIZE", source: "test", caseId: "CASE_SNAP", timestamp: 1000,
+      idempotencyKey: "idem_snap", actor: { type: "FORWARDER", id: "A" }, payload: { amount: 1 },
+    };
+    const ctx = { asOf: 1000, contextRefs: { ref: "r1" } };
+    const pending = host.startSession({ sessionId: "S_SNAP", event, flowHash, ctx });
+    setTimeout(() => { event.payload.amount = 999; ctx.contextRefs.ref = "r2"; }, 1);
+    const commit = await pending;
+    const [step] = await storage.getSteps("S_SNAP");
+    assert.deepEqual(step.event.payload, { amount: 1 });
+    assert.deepEqual(step.ctx.contextRefs, { ref: "r1" });
+    const replay = kernel.start("S_SNAP", step.event, sampleFlow(), step.ctx);
+    assert.equal(replay.audit.resultHash, commit.audit.resultHash, "stored inputs replay to the same commit");
+
+    // 2. A getter is read once, so the dedup key, the decision and the stored step agree.
+    let reads = 0;
+    const tricky = {
+      id: "EVT_GET", type: "INITIALIZE", source: "test", caseId: "CASE_GET", timestamp: 1000,
+      actor: { type: "FORWARDER", id: "A" }, payload: {},
+    };
+    Object.defineProperty(tricky, "idempotencyKey", { enumerable: true, get: () => `k${reads++}` });
+    const c2 = await host.startSession({ sessionId: "S_GET", event: tricky, flowHash, ctx: { asOf: 1000, contextRefs: {} } });
+    assert.equal(reads, 1);
+    const [step2] = await storage.getSteps("S_GET");
+    assert.equal(step2.event.idempotencyKey, "k0");
+    assert.equal(kernel.start("S_GET", step2.event, sampleFlow(), step2.ctx).audit.resultHash, c2.audit.resultHash);
+
+    // 3. Values JSON cannot carry are rejected at the boundary, not passed on.
+    const looped = { ...event, idempotencyKey: "idem_loop" };
+    looped.payload = { self: null };
+    looped.payload.self = looped.payload;
+    await assert.rejects(host.startSession({ sessionId: "S_LOOP", event: looped, flowHash, ctx }), /Validation failed at 'event': not JSON-serialisable/);
+  });
 });

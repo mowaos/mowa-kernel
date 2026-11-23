@@ -1,6 +1,13 @@
 /**
  * Runtime boundary validation.
  * Validates untrusted input crossing network/extension boundaries.
+ *
+ * Every validator first takes a snapshot of its input (a JSON round trip, which is the
+ * form the kernel receives), then checks and returns the snapshot. The host only ever
+ * uses that snapshot, so what is hashed, decided and stored as the step's inputs is the
+ * same data, even if the caller changes its object afterwards or a property is a getter.
+ * Unknown fields are kept, so the kernel still rejects them rather than the host
+ * silently dropping them.
  */
 
 import type {
@@ -29,6 +36,19 @@ function assertInteger(val: unknown, path: string): asserts val is number {
   }
 }
 
+function snapshot(val: unknown, path: string): unknown {
+  let text: string | undefined;
+  try {
+    text = JSON.stringify(val);
+  } catch (err) {
+    throw new ValidationError(path, `not JSON-serialisable (${err instanceof Error ? err.message : String(err)})`);
+  }
+  if (text === undefined) {
+    throw new ValidationError(path, "not JSON-serialisable");
+  }
+  return JSON.parse(text) as unknown;
+}
+
 function assertObject(
   val: unknown,
   path: string
@@ -38,7 +58,8 @@ function assertObject(
   }
 }
 
-export function validateCanonicalEvent(input: unknown): CanonicalEvent {
+export function validateCanonicalEvent(raw: unknown): CanonicalEvent {
+  const input = snapshot(raw, "event");
   assertObject(input, "event");
   assertString(input.id, "event.id");
   assertString(input.type, "event.type");
@@ -60,7 +81,8 @@ export function validateCanonicalEvent(input: unknown): CanonicalEvent {
   return input as unknown as CanonicalEvent;
 }
 
-export function validateDecisionContext(input: unknown): DecisionContext {
+export function validateDecisionContext(raw: unknown): DecisionContext {
+  const input = snapshot(raw, "context");
   assertObject(input, "context");
   assertInteger(input.asOf, "context.asOf");
 
@@ -77,10 +99,11 @@ export function validateDecisionContext(input: unknown): DecisionContext {
   };
 }
 
-export function validateDecisionFacts(input: unknown): DecisionFacts {
-  if (input === undefined || input === null) {
+export function validateDecisionFacts(raw: unknown): DecisionFacts {
+  if (raw === undefined || raw === null) {
     return { facts: {} };
   }
+  const input = snapshot(raw, "facts");
   assertObject(input, "facts");
   const factsObj = input.facts ?? {};
   assertObject(factsObj, "facts.facts");
@@ -92,7 +115,8 @@ export function validateDecisionFacts(input: unknown): DecisionFacts {
   return { facts: factsObj as Record<string, string> };
 }
 
-export function validateFlowDefinition(input: unknown): FlowDefinition {
+export function validateFlowDefinition(raw: unknown): FlowDefinition {
+  const input = snapshot(raw, "flow");
   assertObject(input, "flow");
   assertString(input.id, "flow.id");
   assertString(input.version, "flow.version");

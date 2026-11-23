@@ -38,12 +38,19 @@ rename below; the release date is set when the tag is pushed.
   adds a `steps` store; 0.4 databases upgrade automatically, but sessions committed
   before the upgrade cannot be exported: the export throws
   `IncompleteStepHistoryError` (with `sessionId`, `stepCount` and `sessionVersion`).
+- **Browser host works from a snapshot of its inputs:** the host validates, decides on
+  and stores a JSON snapshot of each event, facts, context and flow, not the caller's
+  objects. Before, changing an object while a commit was in progress, or passing a
+  getter, could store step inputs that no longer replayed to the same commit. Inputs
+  that JSON cannot represent (for example circular objects) now fail with
+  `ValidationError`.
 - **Release build:** absolute build paths are stripped from the WASM binary, so the
   release build is byte-identical wherever it is built (and contains no local paths).
 - **Docs:** README, [hashing specification](docs/hashing-spec.md) with a test vector
   that CI recomputes without kernel code.
 - **Packaging:** Apache-2.0 `LICENSE` and `NOTICE`, shipped inside every crate and the npm
-  package; crate and npm metadata, CI and release workflows.
+  package; crate and npm metadata, CI and release workflows, and a weekly RustSec
+  advisory check.
   Built WASM is no longer committed; it is attached to each release with `SHA256SUMS`.
 
 ## 0.4.3 (2026-11-17)
