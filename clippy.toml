@@ -1,0 +1,11 @@
+# Nondeterminism bans.
+# HashMap/HashSet iteration order is randomized by default.
+# Wall-clock access is banned outright to enforce pure state transitions.
+disallowed-types = [
+  "std::collections::HashMap",
+  "std::collections::HashSet",
+]
+disallowed-methods = [
+  "std::time::SystemTime::now",
+  "std::time::Instant::now",
+]

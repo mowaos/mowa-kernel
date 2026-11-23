@@ -1,0 +1,990 @@
+{
+  "description": "Flow validation cases. Each case applies `patch` (JSON merge patch, RFC 7386: null removes a field) to `flow` and loads the result. `codes` lists the error codes the validator must return, sorted. The runner also checks that docs/schemas/flow.schema.json accepts exactly the flows the kernel can parse (every case except BAD_REQUEST). See docs/flow-spec.md.",
+  "flow": {
+    "id": "example.review",
+    "version": "1",
+    "status": "ACTIVE",
+    "startNode": "submitted",
+    "startActors": [
+      "SYSTEM"
+    ],
+    "description": "Conformance flow: screening, document checks, fallbacks and terminal states.",
+    "declaredFacts": {
+      "check:screening": [
+        "PASS",
+        "HIT"
+      ],
+      "doc:invoice": [
+        "VERIFIED",
+        "MISSING",
+        "CONFLICTED"
+      ],
+      "doc:packing": [
+        "VERIFIED",
+        "MISSING",
+        "CONFLICTED"
+      ]
+    },
+    "nodes": {
+      "submitted": {
+        "id": "submitted",
+        "type": "intake",
+        "tier": "T1",
+        "transitions": {
+          "approve": {
+            "to": "approved",
+            "allowedActors": [
+              "REVIEWER"
+            ],
+            "guard": {
+              "op": "status_is",
+              "target": "check:screening",
+              "status": "PASS"
+            },
+            "onGuardFail": "held"
+          },
+          "finalise": {
+            "to": "approved",
+            "allowedActors": [
+              "REVIEWER"
+            ],
+            "guard": {
+              "op": "status_is",
+              "target": "check:screening",
+              "status": "PASS"
+            }
+          },
+          "docs_check": {
+            "to": "ready",
+            "allowedActors": [
+              "SYSTEM"
+            ],
+            "guard": {
+              "op": "all_of",
+              "guards": [
+                {
+                  "op": "none_with_status",
+                  "prefix": "doc:",
+                  "status": "CONFLICTED"
+                },
+                {
+                  "op": "any_of",
+                  "guards": [
+                    {
+                      "op": "status_is",
+                      "target": "doc:invoice",
+                      "status": "VERIFIED"
+                    },
+                    {
+                      "op": "not",
+                      "guard": {
+                        "op": "status_is",
+                        "target": "doc:packing",
+                        "status": "MISSING"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "onGuardFail": "held"
+          },
+          "withdraw": {
+            "to": "withdrawn",
+            "allowedActors": [
+              "SYSTEM",
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "held": {
+        "id": "held",
+        "type": "review",
+        "tier": "T2",
+        "transitions": {
+          "release": {
+            "to": "submitted",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "ready": {
+        "id": "ready",
+        "type": "queue",
+        "tier": "T1",
+        "transitions": {
+          "close": {
+            "to": "approved",
+            "allowedActors": [
+              "SYSTEM"
+            ]
+          }
+        }
+      },
+      "approved": {
+        "id": "approved",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true,
+        "onEnter": [
+          {
+            "kind": "notify",
+            "payload": {
+              "template": "approved"
+            }
+          },
+          {
+            "kind": "archive"
+          }
+        ]
+      },
+      "withdrawn": {
+        "id": "withdrawn",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true
+      }
+    },
+    "effectiveFrom": 1000,
+    "effectiveTo": 100000
+  },
+  "cases": [
+    {
+      "name": "the base flow is valid",
+      "spec": "flow-spec.md#2-document",
+      "patch": {},
+      "expect": {
+        "status": "OK"
+      }
+    },
+    {
+      "name": "lifecycle fields do not change the flow hash",
+      "spec": "flow-spec.md#8-lifecycle",
+      "patch": {
+        "status": "DEPRECATED",
+        "effectiveFrom": 5,
+        "effectiveTo": null
+      },
+      "expect": {
+        "status": "OK",
+        "sameHashAsBase": true
+      }
+    },
+    {
+      "name": "any other field changes the flow hash",
+      "spec": "flow-spec.md#10-flow-hash",
+      "patch": {
+        "description": "edited"
+      },
+      "expect": {
+        "status": "OK",
+        "sameHashAsBase": false
+      }
+    },
+    {
+      "name": "actor lists are sets: order and duplicates do not change the hash",
+      "spec": "flow-spec.md#7-actors",
+      "patch": {
+        "startActors": [
+          "SYSTEM",
+          "SYSTEM"
+        ],
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "withdraw": {
+                "allowedActors": [
+                  "REVIEWER",
+                  "SYSTEM",
+                  "REVIEWER"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "OK",
+        "sameHashAsBase": true
+      }
+    },
+    {
+      "name": "defaults written out give the same hash",
+      "spec": "flow-spec.md#2-document",
+      "patch": {
+        "nodes": {
+          "held": {
+            "terminal": false,
+            "onEnter": []
+          },
+          "withdrawn": {
+            "transitions": {},
+            "onEnter": []
+          }
+        }
+      },
+      "expect": {
+        "status": "OK",
+        "sameHashAsBase": true
+      }
+    },
+    {
+      "name": "guard nesting up to 16 is allowed",
+      "spec": "flow-spec.md#5-guards",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "not",
+                  "guard": {
+                    "op": "not",
+                    "guard": {
+                      "op": "not",
+                      "guard": {
+                        "op": "not",
+                        "guard": {
+                          "op": "not",
+                          "guard": {
+                            "op": "not",
+                            "guard": {
+                              "op": "not",
+                              "guard": {
+                                "op": "not",
+                                "guard": {
+                                  "op": "not",
+                                  "guard": {
+                                    "op": "not",
+                                    "guard": {
+                                      "op": "not",
+                                      "guard": {
+                                        "op": "not",
+                                        "guard": {
+                                          "op": "not",
+                                          "guard": {
+                                            "op": "not",
+                                            "guard": {
+                                              "op": "not",
+                                              "guard": {
+                                                "op": "status_is",
+                                                "target": "check:screening",
+                                                "status": "PASS"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "OK"
+      }
+    },
+    {
+      "name": "start node missing",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "startNode": "nope"
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "START_NODE_MISSING"
+        ]
+      }
+    },
+    {
+      "name": "start node terminal",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "terminal": true
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "START_NODE_CANNOT_BE_TERMINAL",
+          "TERMINAL_HAS_TRANSITIONS"
+        ]
+      }
+    },
+    {
+      "name": "no start actors",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "startActors": []
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "NO_START_ACTORS"
+        ]
+      }
+    },
+    {
+      "name": "blank start actor",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "startActors": [
+          " "
+        ]
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "EMPTY_START_ACTOR"
+        ]
+      }
+    },
+    {
+      "name": "node key differs from node id",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "held": {
+            "id": "Held"
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "NODE_ID_MISMATCH"
+        ]
+      }
+    },
+    {
+      "name": "transition to an unknown node",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "withdraw": {
+                "to": "gone"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "UNKNOWN_TARGET",
+          "UNREACHABLE"
+        ]
+      }
+    },
+    {
+      "name": "fallback to an unknown node",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "approve": {
+                "onGuardFail": "gone"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "UNKNOWN_FALLBACK"
+        ]
+      }
+    },
+    {
+      "name": "fallback without a guard",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "withdraw": {
+                "onGuardFail": "held"
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "FALLBACK_WITHOUT_GUARD"
+        ]
+      }
+    },
+    {
+      "name": "no allowed actors",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "withdraw": {
+                "allowedActors": []
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "NO_ALLOWED_ACTORS"
+        ]
+      }
+    },
+    {
+      "name": "blank allowed actor",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "withdraw": {
+                "allowedActors": [
+                  ""
+                ]
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "EMPTY_ALLOWED_ACTOR"
+        ]
+      }
+    },
+    {
+      "name": "guard nested deeper than 16",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "not",
+                  "guard": {
+                    "op": "not",
+                    "guard": {
+                      "op": "not",
+                      "guard": {
+                        "op": "not",
+                        "guard": {
+                          "op": "not",
+                          "guard": {
+                            "op": "not",
+                            "guard": {
+                              "op": "not",
+                              "guard": {
+                                "op": "not",
+                                "guard": {
+                                  "op": "not",
+                                  "guard": {
+                                    "op": "not",
+                                    "guard": {
+                                      "op": "not",
+                                      "guard": {
+                                        "op": "not",
+                                        "guard": {
+                                          "op": "not",
+                                          "guard": {
+                                            "op": "not",
+                                            "guard": {
+                                              "op": "not",
+                                              "guard": {
+                                                "op": "not",
+                                                "guard": {
+                                                  "op": "status_is",
+                                                  "target": "check:screening",
+                                                  "status": "PASS"
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "GUARD_TOO_DEEP"
+        ]
+      }
+    },
+    {
+      "name": "guard reads an undeclared fact",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "status_is",
+                  "target": "check:typo",
+                  "status": "PASS"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "UNDECLARED_FACT"
+        ]
+      }
+    },
+    {
+      "name": "guard tests a status the fact cannot have",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "status_is",
+                  "target": "check:screening",
+                  "status": "PASSED"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "INVALID_FACT_STATUS"
+        ]
+      }
+    },
+    {
+      "name": "none_with_status prefix matches no declared fact",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "none_with_status",
+                  "prefix": "file:",
+                  "status": "MISSING"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "UNDECLARED_FACT_PREFIX"
+        ]
+      }
+    },
+    {
+      "name": "none_with_status status no prefixed fact can have",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "none_with_status",
+                  "prefix": "doc:",
+                  "status": "EXPIRED"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "INVALID_FACT_STATUS_FOR_PREFIX"
+        ]
+      }
+    },
+    {
+      "name": "non-terminal node without transitions",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "held": {
+            "transitions": null
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "DEAD_END"
+        ]
+      }
+    },
+    {
+      "name": "terminal node with transitions",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "approved": {
+            "transitions": {
+              "reopen": {
+                "to": "submitted",
+                "allowedActors": [
+                  "REVIEWER"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "TERMINAL_HAS_TRANSITIONS"
+        ]
+      }
+    },
+    {
+      "name": "node not reachable from the start",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "nodes": {
+          "orphan": {
+            "id": "orphan",
+            "type": "outcome",
+            "tier": "T0",
+            "terminal": true
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "UNREACHABLE"
+        ]
+      }
+    },
+    {
+      "name": "blank fact name",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "declaredFacts": {
+          " ": [
+            "A"
+          ]
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "EMPTY_FACT_KEY"
+        ]
+      }
+    },
+    {
+      "name": "fact without statuses",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "declaredFacts": {
+          "x:y": []
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "EMPTY_FACT_STATUSES"
+        ]
+      }
+    },
+    {
+      "name": "blank fact status",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "declaredFacts": {
+          "x:y": [
+            ""
+          ]
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "EMPTY_FACT_STATUS"
+        ]
+      }
+    },
+    {
+      "name": "duplicate fact status",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "declaredFacts": {
+          "x:y": [
+            "A",
+            "A"
+          ]
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "DUPLICATE_FACT_STATUS"
+        ]
+      }
+    },
+    {
+      "name": "every problem is reported, not only the first",
+      "spec": "flow-spec.md#9-validation-rules",
+      "patch": {
+        "startActors": [],
+        "nodes": {
+          "held": {
+            "id": "Held"
+          }
+        }
+      },
+      "expect": {
+        "status": "FLOW_INVALID",
+        "codes": [
+          "NODE_ID_MISMATCH",
+          "NO_START_ACTORS"
+        ]
+      }
+    },
+    {
+      "name": "unknown top-level field",
+      "spec": "flow-spec.md#2-document",
+      "patch": {
+        "colour": "blue"
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "unknown guard field",
+      "spec": "flow-spec.md#5-guards",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "status_is",
+                  "target": "check:screening",
+                  "status": "PASS",
+                  "note": "x"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "unknown guard op",
+      "spec": "flow-spec.md#5-guards",
+      "patch": {
+        "nodes": {
+          "submitted": {
+            "transitions": {
+              "extra": {
+                "to": "held",
+                "allowedActors": [
+                  "REVIEWER"
+                ],
+                "guard": {
+                  "op": "status_in",
+                  "target": "check:screening",
+                  "status": "PASS"
+                }
+              }
+            }
+          }
+        }
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "unknown tier",
+      "spec": "flow-spec.md#3-nodes",
+      "patch": {
+        "nodes": {
+          "held": {
+            "tier": "T9"
+          }
+        }
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "status is case-sensitive",
+      "spec": "flow-spec.md#8-lifecycle",
+      "patch": {
+        "status": "active"
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "effectiveFrom is required",
+      "spec": "flow-spec.md#8-lifecycle",
+      "patch": {
+        "effectiveFrom": null
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "payload integers must be within +/-(2^53-1)",
+      "spec": "flow-spec.md#2-document",
+      "patch": {
+        "nodes": {
+          "approved": {
+            "onEnter": [
+              {
+                "kind": "notify",
+                "payload": {
+                  "count": 9007199254740992
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    },
+    {
+      "name": "payload integers at the limit are allowed",
+      "spec": "flow-spec.md#2-document",
+      "patch": {
+        "nodes": {
+          "approved": {
+            "onEnter": [
+              {
+                "kind": "notify",
+                "payload": {
+                  "count": -9007199254740991
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": "OK"
+      }
+    },
+    {
+      "name": "numbers must be integers",
+      "spec": "flow-spec.md#6-effects",
+      "patch": {
+        "nodes": {
+          "approved": {
+            "onEnter": [
+              {
+                "kind": "notify",
+                "payload": {
+                  "delayDays": 1.5
+                }
+              }
+            ]
+          }
+        }
+      },
+      "expect": {
+        "status": "BAD_REQUEST"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# Build artifacts
+/target
+/pkg
+/pkg-web
+node_modules/
+dist/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.secret
+
+# IDE and OS
+.DS_Store
+*.swp
+*.bak
+.idea/
+.vscode/

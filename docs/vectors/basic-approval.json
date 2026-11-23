@@ -1,0 +1,209 @@
+{
+  "description": "Two-step example: start, then advance with one declared fact and one undeclared fact (dropped). Hash fields depend on kernelVersion only via audit.resultHash and session.lastResultHash.",
+  "inputs": {
+    "flow": {
+      "id": "example.approval",
+      "version": "1",
+      "status": "ACTIVE",
+      "startNode": "submitted",
+      "startActors": [
+        "USER"
+      ],
+      "declaredFacts": {
+        "check:screening": [
+          "PASS",
+          "FAIL"
+        ]
+      },
+      "nodes": {
+        "submitted": {
+          "id": "submitted",
+          "type": "task",
+          "tier": "T0",
+          "transitions": {
+            "REVIEW": {
+              "to": "approved",
+              "allowedActors": [
+                "USER"
+              ],
+              "guard": {
+                "op": "status_is",
+                "target": "check:screening",
+                "status": "PASS"
+              },
+              "onGuardFail": "held"
+            }
+          }
+        },
+        "approved": {
+          "id": "approved",
+          "type": "end",
+          "tier": "T0",
+          "terminal": true,
+          "onEnter": [
+            {
+              "kind": "notify",
+              "payload": {
+                "template": "approved"
+              }
+            }
+          ]
+        },
+        "held": {
+          "id": "held",
+          "type": "end",
+          "tier": "T0",
+          "terminal": true
+        }
+      },
+      "effectiveFrom": 0
+    },
+    "start": {
+      "sessionId": "sess-1",
+      "event": {
+        "id": "e1",
+        "type": "SESSION_INITIALIZED",
+        "source": "example",
+        "caseId": "case-1",
+        "timestamp": 1000,
+        "idempotencyKey": "idem-e1",
+        "actor": {
+          "type": "USER",
+          "id": "u-1"
+        },
+        "payload": {}
+      },
+      "ctx": {
+        "asOf": 1000,
+        "contextRefs": {}
+      }
+    },
+    "advance": {
+      "event": {
+        "id": "e2",
+        "type": "REVIEW",
+        "source": "example",
+        "caseId": "case-1",
+        "timestamp": 2000,
+        "idempotencyKey": "idem-e2",
+        "actor": {
+          "type": "USER",
+          "id": "u-1"
+        },
+        "payload": {}
+      },
+      "facts": {
+        "facts": {
+          "check:screening": "PASS",
+          "other:ignored": "X"
+        }
+      },
+      "ctx": {
+        "asOf": 2000,
+        "contextRefs": {
+          "screeningList": "2026-11-01"
+        }
+      }
+    }
+  },
+  "outputs": {
+    "start": {
+      "newSession": {
+        "id": "sess-1",
+        "caseId": "case-1",
+        "workflowId": "example.approval",
+        "workflowVersion": "1",
+        "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
+        "state": "submitted",
+        "variables": {},
+        "version": 0,
+        "createdAt": 1000,
+        "updatedAt": 1000,
+        "lastResultHash": "b4f646c89ab879e20d87fb4d9b17dde7f449ff12636e2732c928137f6d0bcd99"
+      },
+      "expectedSessionVersion": null,
+      "audit": {
+        "transitionId": "tr_68f87da6cb3a7576beaa6b0b733933bd",
+        "sessionId": "sess-1",
+        "caseId": "case-1",
+        "fromVersion": null,
+        "eventId": "e1",
+        "eventType": "SESSION_INITIALIZED",
+        "resolvedKey": null,
+        "fromState": null,
+        "toState": "submitted",
+        "guardFailed": false,
+        "workflowId": "example.approval",
+        "workflowVersion": "1",
+        "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
+        "kernelVersion": "0.5.0",
+        "decisionHash": "967a5d3cd9272dd9c7a78d0d20ede68715f723fcbd820729b4e54d4caab2686f",
+        "contextRefs": {},
+        "factsHash": "69a5a5c3d4a916b9ca4a56f468daac9848ecb661cf2496a3d422ab79cac086da",
+        "actor": {
+          "type": "USER",
+          "id": "u-1"
+        },
+        "timestamp": 1000,
+        "prevResultHash": null,
+        "resultHash": "b4f646c89ab879e20d87fb4d9b17dde7f449ff12636e2732c928137f6d0bcd99"
+      },
+      "dedupKey": "0e96202f4c3d7748456871eb0f62922124bd0345ebb81809707f01f2adec5cd3",
+      "outbox": []
+    },
+    "advance": {
+      "newSession": {
+        "id": "sess-1",
+        "caseId": "case-1",
+        "workflowId": "example.approval",
+        "workflowVersion": "1",
+        "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
+        "state": "approved",
+        "variables": {},
+        "version": 1,
+        "createdAt": 1000,
+        "updatedAt": 2000,
+        "lastResultHash": "b187365cd8011377e3b18f0161b89d039ece44985b1fbbca633f8810928c6e06"
+      },
+      "expectedSessionVersion": 0,
+      "audit": {
+        "transitionId": "tr_c5b6503a2a15d6660016a3fd6310fc52",
+        "sessionId": "sess-1",
+        "caseId": "case-1",
+        "fromVersion": 0,
+        "eventId": "e2",
+        "eventType": "REVIEW",
+        "resolvedKey": "REVIEW",
+        "fromState": "submitted",
+        "toState": "approved",
+        "guardFailed": false,
+        "workflowId": "example.approval",
+        "workflowVersion": "1",
+        "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
+        "kernelVersion": "0.5.0",
+        "decisionHash": "4988cbc2ca1244ae55af0fa4a80eb2321c15f3739f96e741c80e9e1ee8735055",
+        "contextRefs": {
+          "screeningList": "2026-11-01"
+        },
+        "factsHash": "28968637ff48e7c4246f9498264fdbb56bc4684244746b7fd791562a09fafc50",
+        "actor": {
+          "type": "USER",
+          "id": "u-1"
+        },
+        "timestamp": 2000,
+        "prevResultHash": "b4f646c89ab879e20d87fb4d9b17dde7f449ff12636e2732c928137f6d0bcd99",
+        "resultHash": "b187365cd8011377e3b18f0161b89d039ece44985b1fbbca633f8810928c6e06"
+      },
+      "dedupKey": "f289372b7b72bd4a59aa7e85d5c96566e7b5b49c781c2a1122decbb8a4970452",
+      "outbox": [
+        {
+          "id": "04b21541a7a888837f56a882c01cd45b",
+          "kind": "notify",
+          "payload": {
+            "template": "approved"
+          }
+        }
+      ]
+    }
+  }
+}

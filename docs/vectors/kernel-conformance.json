@@ -1,0 +1,1198 @@
+{
+  "description": "Kernel conformance cases. Each case runs its steps in order against `flow` (with any `flowPatch` applied as a JSON merge patch, RFC 7386). An advance step uses the session from the case's last successful start or advance. Steps omit fields that equal `eventDefaults` and `ctxDefaults`; the event fields given replace the defaults one by one. For every OK step the runner also recomputes all hashes independently (hashing-spec.md). See docs/kernel-spec.md.",
+  "flow": {
+    "id": "example.review",
+    "version": "1",
+    "status": "ACTIVE",
+    "startNode": "submitted",
+    "startActors": [
+      "SYSTEM"
+    ],
+    "description": "Conformance flow: screening, document checks, fallbacks and terminal states.",
+    "declaredFacts": {
+      "check:screening": [
+        "PASS",
+        "HIT"
+      ],
+      "doc:invoice": [
+        "VERIFIED",
+        "MISSING",
+        "CONFLICTED"
+      ],
+      "doc:packing": [
+        "VERIFIED",
+        "MISSING",
+        "CONFLICTED"
+      ]
+    },
+    "nodes": {
+      "submitted": {
+        "id": "submitted",
+        "type": "intake",
+        "tier": "T1",
+        "transitions": {
+          "approve": {
+            "to": "approved",
+            "allowedActors": [
+              "REVIEWER"
+            ],
+            "guard": {
+              "op": "status_is",
+              "target": "check:screening",
+              "status": "PASS"
+            },
+            "onGuardFail": "held"
+          },
+          "finalise": {
+            "to": "approved",
+            "allowedActors": [
+              "REVIEWER"
+            ],
+            "guard": {
+              "op": "status_is",
+              "target": "check:screening",
+              "status": "PASS"
+            }
+          },
+          "docs_check": {
+            "to": "ready",
+            "allowedActors": [
+              "SYSTEM"
+            ],
+            "guard": {
+              "op": "all_of",
+              "guards": [
+                {
+                  "op": "none_with_status",
+                  "prefix": "doc:",
+                  "status": "CONFLICTED"
+                },
+                {
+                  "op": "any_of",
+                  "guards": [
+                    {
+                      "op": "status_is",
+                      "target": "doc:invoice",
+                      "status": "VERIFIED"
+                    },
+                    {
+                      "op": "not",
+                      "guard": {
+                        "op": "status_is",
+                        "target": "doc:packing",
+                        "status": "MISSING"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "onGuardFail": "held"
+          },
+          "withdraw": {
+            "to": "withdrawn",
+            "allowedActors": [
+              "SYSTEM",
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "held": {
+        "id": "held",
+        "type": "review",
+        "tier": "T2",
+        "transitions": {
+          "release": {
+            "to": "submitted",
+            "allowedActors": [
+              "REVIEWER"
+            ]
+          }
+        }
+      },
+      "ready": {
+        "id": "ready",
+        "type": "queue",
+        "tier": "T1",
+        "transitions": {
+          "close": {
+            "to": "approved",
+            "allowedActors": [
+              "SYSTEM"
+            ]
+          }
+        }
+      },
+      "approved": {
+        "id": "approved",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true,
+        "onEnter": [
+          {
+            "kind": "notify",
+            "payload": {
+              "template": "approved"
+            }
+          },
+          {
+            "kind": "archive"
+          }
+        ]
+      },
+      "withdrawn": {
+        "id": "withdrawn",
+        "type": "outcome",
+        "tier": "T0",
+        "terminal": true
+      }
+    },
+    "effectiveFrom": 1000,
+    "effectiveTo": 100000
+  },
+  "eventDefaults": {
+    "id": "evt-1",
+    "type": "SUBMITTED",
+    "source": "conformance",
+    "caseId": "case-1",
+    "timestamp": 1000,
+    "idempotencyKey": "k-1",
+    "actor": {
+      "type": "SYSTEM",
+      "id": "system-1"
+    },
+    "payload": {}
+  },
+  "ctxDefaults": {
+    "asOf": 2000,
+    "contextRefs": {
+      "screeningList": "2026-11-01"
+    }
+  },
+  "cases": [
+    {
+      "name": "start creates version 0 on the start node",
+      "spec": "kernel-spec.md#3-start",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0,
+            "fromState": null,
+            "outbox": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "guard true: transition taken, onEnter effects emitted in order",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "PASS"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "approved",
+            "version": 1,
+            "fromState": "submitted",
+            "guardFailed": false,
+            "outbox": [
+              "notify",
+              "archive"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "guard false with onGuardFail: fallback taken, guardFailed true",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "HIT"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "held",
+            "version": 1,
+            "guardFailed": true,
+            "outbox": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "guard false without onGuardFail is an error",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "finalise",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "HIT"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "GUARD_NOT_SATISFIED",
+            "error": {
+              "state": "submitted",
+              "key": "finalise"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a fact the guard reads is missing",
+      "spec": "kernel-spec.md#5-guard-evaluation",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {}
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "MISSING_REQUIRED_FACT",
+            "error": {
+              "fact": "check:screening"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "a declared fact has a status the flow does not allow",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "MAYBE"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "INVALID_FACT_STATUS",
+            "error": {
+              "fact": "check:screening",
+              "status": "MAYBE"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "undeclared facts are ignored, whatever their status",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "PASS",
+              "other:anything": "NOT_A_STATUS"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "approved",
+            "version": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "none_with_status needs every declared fact with the prefix",
+      "spec": "kernel-spec.md#5-guard-evaluation",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "docs_check",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "VERIFIED"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "MISSING_REQUIRED_FACT",
+            "error": {
+              "fact": "doc:packing"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "nested guard true via any_of first branch",
+      "spec": "kernel-spec.md#5-guard-evaluation",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "docs_check",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "VERIFIED",
+              "doc:packing": "MISSING"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "ready",
+            "version": 1,
+            "guardFailed": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "nested guard false: a conflicted document",
+      "spec": "kernel-spec.md#5-guard-evaluation",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "docs_check",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "CONFLICTED",
+              "doc:packing": "VERIFIED"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "held",
+            "version": 1,
+            "guardFailed": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "nested guard true via not",
+      "spec": "kernel-spec.md#5-guard-evaluation",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "docs_check",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "doc:invoice": "MISSING",
+              "doc:packing": "VERIFIED"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "ready",
+            "version": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown event type for the current node",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "ship",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "NO_TRANSITION",
+            "error": {
+              "state": "submitted",
+              "key": "ship"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "actor type not allowed on the transition",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "PASS"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "UNAUTHORIZED",
+            "error": {
+              "state": "submitted",
+              "key": "approve",
+              "actor": "SYSTEM"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "actor type not allowed to start",
+      "spec": "kernel-spec.md#3-start",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "event": {
+            "type": "SUBMITTED",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "START_UNAUTHORIZED",
+            "error": {
+              "actor": "REVIEWER"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "no step out of a terminal state",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "withdrawn",
+            "version": 1,
+            "outbox": []
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            },
+            "idempotencyKey": "k-2"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "SESSION_TERMINAL",
+            "error": {
+              "state": "withdrawn"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "asOf earlier than the session's last update",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "ctx": {
+            "asOf": 1500
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "TIME_REGRESSED",
+            "error": {
+              "asOf": 1500,
+              "sessionUpdatedAt": 2000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "asOf equal to the last update is allowed",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "ctx": {
+            "asOf": 2000
+          },
+          "expect": {
+            "status": "OK",
+            "state": "withdrawn",
+            "version": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "event for a different case",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            },
+            "caseId": "case-2"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "CASE_MISMATCH",
+            "error": {
+              "sessionCase": "case-1",
+              "eventCase": "case-2"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DRAFT flows cannot start or advance",
+      "spec": "kernel-spec.md#6-lifecycle",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "flowPatch": {
+            "status": "DRAFT"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "FLOW_NOT_ACTIVE",
+            "error": {
+              "flowId": "example.review",
+              "version": "1"
+            }
+          }
+        },
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "flowPatch": {
+            "status": "DRAFT"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "FLOW_NOT_ACTIVE"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DEPRECATED flows cannot start, but running sessions continue",
+      "spec": "kernel-spec.md#6-lifecycle",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "flowPatch": {
+            "status": "DEPRECATED"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "FLOW_NOT_ACTIVE"
+          }
+        },
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "flowPatch": {
+            "status": "DEPRECATED",
+            "effectiveTo": 1500
+          },
+          "expect": {
+            "status": "OK",
+            "state": "withdrawn",
+            "version": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "effective window is [effectiveFrom, effectiveTo)",
+      "spec": "kernel-spec.md#6-lifecycle",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "ctx": {
+            "asOf": 999
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "OUTSIDE_EFFECTIVE_WINDOW",
+            "error": {
+              "asOf": 999
+            }
+          }
+        },
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "ctx": {
+            "asOf": 100000
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "OUTSIDE_EFFECTIVE_WINDOW",
+            "error": {
+              "asOf": 100000
+            }
+          }
+        },
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "ctx": {
+            "asOf": 1000
+          },
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "a session refuses a flow with different content",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "flowPatch": {
+            "description": "edited"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "FLOW_HASH_MISMATCH"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a session refuses another flow id or version",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "flowPatch": {
+            "version": "2"
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "WORKFLOW_MISMATCH",
+            "error": {
+              "session": "example.review@1",
+              "flow": "example.review@2"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "fact statuses are checked before the transition is looked up",
+      "spec": "kernel-spec.md#4-advance",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "ship",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "MAYBE"
+            }
+          },
+          "expect": {
+            "status": "KERNEL_ERROR",
+            "code": "INVALID_FACT_STATUS"
+          }
+        }
+      ]
+    },
+    {
+      "name": "the same event content in a loop gets a new transitionId each time",
+      "spec": "hashing-spec.md#46-identifiers",
+      "steps": [
+        {
+          "call": "start",
+          "sessionId": "S1",
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 0
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "HIT"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "held",
+            "version": 1,
+            "guardFailed": true
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "release",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            },
+            "idempotencyKey": "k-2"
+          },
+          "expect": {
+            "status": "OK",
+            "state": "submitted",
+            "version": 2
+          }
+        },
+        {
+          "call": "advance",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            }
+          },
+          "facts": {
+            "facts": {
+              "check:screening": "HIT"
+            }
+          },
+          "expect": {
+            "status": "OK",
+            "state": "held",
+            "version": 3,
+            "transitionIdDiffersFromStep": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "dedup key depends only on op, session, case and idempotencyKey",
+      "spec": "kernel-spec.md#7-duplicate-requests",
+      "steps": [
+        {
+          "call": "dedupKey",
+          "op": "ADVANCE",
+          "sessionId": "S1",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            },
+            "id": "evt-a",
+            "timestamp": 1
+          }
+        },
+        {
+          "call": "dedupKey",
+          "op": "ADVANCE",
+          "sessionId": "S1",
+          "event": {
+            "type": "withdraw",
+            "actor": {
+              "type": "SYSTEM",
+              "id": "system-1"
+            },
+            "id": "evt-b",
+            "timestamp": 2
+          },
+          "expect": {
+            "dedupKeyEqualsStep": 0,
+            "intentHashDiffersFromStep": 0
+          }
+        },
+        {
+          "call": "dedupKey",
+          "op": "START",
+          "sessionId": "S1",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            },
+            "id": "evt-a",
+            "timestamp": 1
+          },
+          "expect": {
+            "dedupKeyDiffersFromStep": 0,
+            "intentHashEqualsStep": 0
+          }
+        },
+        {
+          "call": "dedupKey",
+          "op": "ADVANCE",
+          "sessionId": "S2",
+          "event": {
+            "type": "approve",
+            "actor": {
+              "type": "REVIEWER",
+              "id": "reviewer-1"
+            },
+            "id": "evt-a",
+            "timestamp": 1
+          },
+          "expect": {
+            "dedupKeyDiffersFromStep": 0
+          }
+        }
+      ]
+    }
+  ]
+}

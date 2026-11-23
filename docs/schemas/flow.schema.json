@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/mowaos/mowa-kernel/blob/main/docs/schemas/flow.schema.json",
+  "title": "MO·WA flow definition",
+  "description": "Shape of a flow definition (docs/flow-spec.md). A flow that matches this schema can be parsed by the kernel; it must also pass the validation rules in flow-spec.md section 9, which a schema cannot express.",
+  "type": "object",
+  "required": ["id", "version", "status", "startNode", "startActors", "nodes", "effectiveFrom"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string" },
+    "version": { "type": "string" },
+    "status": { "enum": ["DRAFT", "ACTIVE", "DEPRECATED"] },
+    "startNode": { "type": "string" },
+    "startActors": { "type": "array", "items": { "type": "string" } },
+    "description": { "type": ["string", "null"] },
+    "declaredFacts": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "nodes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/node" } },
+    "effectiveFrom": { "type": "integer" },
+    "effectiveTo": { "type": ["integer", "null"] }
+  },
+  "$defs": {
+    "node": {
+      "type": "object",
+      "required": ["id", "type", "tier"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "tier": { "enum": ["T0", "T1", "T2", "T3", "T4"] },
+        "terminal": { "type": "boolean" },
+        "transitions": { "type": "object", "additionalProperties": { "$ref": "#/$defs/transition" } },
+        "onEnter": { "type": "array", "items": { "$ref": "#/$defs/effect" } }
+      }
+    },
+    "transition": {
+      "type": "object",
+      "required": ["to", "allowedActors"],
+      "additionalProperties": false,
+      "properties": {
+        "to": { "type": "string" },
+        "allowedActors": { "type": "array", "items": { "type": "string" } },
+        "guard": { "oneOf": [{ "$ref": "#/$defs/guard" }, { "type": "null" }] },
+        "onGuardFail": { "type": ["string", "null"] }
+      }
+    },
+    "effect": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string" },
+        "payload": { "$ref": "#/$defs/value" }
+      }
+    },
+    "guard": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["op", "guards"],
+          "additionalProperties": false,
+          "properties": { "op": { "const": "all_of" }, "guards": { "type": "array", "items": { "$ref": "#/$defs/guard" } } }
+        },
+        {
+          "type": "object",
+          "required": ["op", "guards"],
+          "additionalProperties": false,
+          "properties": { "op": { "const": "any_of" }, "guards": { "type": "array", "items": { "$ref": "#/$defs/guard" } } }
+        },
+        {
+          "type": "object",
+          "required": ["op", "guard"],
+          "additionalProperties": false,
+          "properties": { "op": { "const": "not" }, "guard": { "$ref": "#/$defs/guard" } }
+        },
+        {
+          "type": "object",
+          "required": ["op", "target", "status"],
+          "additionalProperties": false,
+          "properties": { "op": { "const": "status_is" }, "target": { "type": "string" }, "status": { "type": "string" } }
+        },
+        {
+          "type": "object",
+          "required": ["op", "prefix", "status"],
+          "additionalProperties": false,
+          "properties": { "op": { "const": "none_with_status" }, "prefix": { "type": "string" }, "status": { "type": "string" } }
+        }
+      ]
+    },
+    "value": {
+      "description": "Any JSON value whose numbers are integers (hashing-spec.md section 2).",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "boolean" },
+        { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
+        { "type": "string" },
+        { "type": "array", "items": { "$ref": "#/$defs/value" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/$defs/value" } }
+      ]
+    }
+  }
+}

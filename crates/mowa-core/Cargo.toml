@@ -1,0 +1,25 @@
+[package]
+name = "mowa-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords.workspace = true
+categories.workspace = true
+description = "Pure, deterministic FSM transition reducers (start & advance)"
+
+[dependencies]
+mowa-canon.workspace = true
+mowa-flow.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+proptest.workspace = true
+
+[lints]
+workspace = true

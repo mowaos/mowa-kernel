@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gate:
+    name: Public gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-public.sh
+
+  dco:
+    name: DCO sign-off
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Every commit in the pull request has Signed-off-by
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            if ! git log -1 --format=%B "$c" | grep -qE '^Signed-off-by: .+ <.+>$'; then
+              echo "Missing Signed-off-by: $(git log -1 --format='%h %s' "$c")"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+  rust:
+    name: Rust (fmt, clippy, tests)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # rustup reads rust-toolchain.toml and installs the pinned toolchain.
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+
+  deny:
+    name: Dependency licences and advisories
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  wasm:
+    name: WASM, spec vectors and browser host
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install wasm-bindgen CLI (version pinned in Cargo.lock)
+        run: |
+          v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
+          cargo install wasm-bindgen-cli --version "$v" --locked
+      - run: npm install --global typescript@5.7.3
+      - run: npm test
+
+  reproducible:
+    name: Reproducible WASM build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: first
+      - uses: actions/checkout@v4
+        with:
+          path: elsewhere/second
+      - run: rustup show
+        working-directory: first
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install wasm-bindgen CLI
+        working-directory: first
+        run: |
+          v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
+          cargo install wasm-bindgen-cli --version "$v" --locked
+      - name: Build twice in different directories and compare
+        run: |
+          (cd first && bash js-smoke/run.sh)
+          (cd elsewhere/second && bash js-smoke/run.sh)
+          sha256sum first/pkg-web/mowa_wasm_bg.wasm elsewhere/second/pkg-web/mowa_wasm_bg.wasm
+          cmp first/pkg-web/mowa_wasm_bg.wasm elsewhere/second/pkg-web/mowa_wasm_bg.wasm
+          if strings first/pkg-web/mowa_wasm_bg.wasm | grep -E '/home/|/runner/'; then
+            echo "Build path leaked into the WASM binary" >&2
+            exit 1
+          fi

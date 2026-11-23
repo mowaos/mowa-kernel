@@ -1,0 +1,24 @@
+{
+  "name": "mowa-kernel-monorepo",
+  "version": "0.5.0",
+  "private": true,
+  "description": "MO·WA OS - Foundational Deterministic FSM Execution Kernel",
+  "author": "Bruce Gardiner (ScrAtcH)",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test:rust": "cargo test --workspace --locked",
+    "lint:rust": "cargo clippy --workspace --all-targets --locked -- -D warnings",
+    "fmt:rust": "cargo fmt --all -- --check",
+    "test:wasm": "bash js-smoke/run.sh && node --test js-smoke/verify-wasm.mjs js-smoke/verify-spec.mjs js-smoke/verify-conformance.mjs",
+    "test:host": "npm --prefix packages/host-browser test",
+    "build:host": "npm --prefix packages/host-browser run build",
+    "test": "npm run test:rust && npm run test:wasm && npm run test:host"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mowaos/mowa-kernel.git"
+  }
+}

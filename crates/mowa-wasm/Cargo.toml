@@ -1,0 +1,36 @@
+[package]
+name = "mowa-wasm"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme = "../../README.md"
+keywords.workspace = true
+categories.workspace = true
+description = "WASM FFI boundary and in-memory flow cache for host runtimes"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+mowa-canon.workspace = true
+mowa-flow.workspace = true
+mowa-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+
+# Own lint set: wasm-bindgen's generated macros expand to `unsafe`, so the
+# workspace-wide `unsafe_code = "forbid"` cannot apply to this thin shim crate.
+# All logic stays in the forbid(unsafe) crates; this file only marshals JSON.
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+indexing_slicing = "deny"
+float_arithmetic = "deny"
