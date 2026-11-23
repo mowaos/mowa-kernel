@@ -15,19 +15,22 @@ jobs:
   release:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Public gate (includes tag-matches-version check)
         run: bash scripts/check-public.sh "$GITHUB_REF_NAME"
 
       - run: rustup show
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install wasm-bindgen CLI (version pinned in Cargo.lock)
         run: |
           v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
-          cargo install wasm-bindgen-cli --version "$v" --locked
+          # The CLI is a build tool, not part of the kernel: it needs a newer Rust than the
+          # kernel's pinned toolchain (wasm-bindgen-cli 0.2.126 requires 1.86).
+          rustup toolchain install stable --profile minimal
+          cargo +stable install wasm-bindgen-cli --version "$v" --locked
       - run: npm install --global typescript@5.7.3
 
       - name: Full test suite (builds pkg/ and pkg-web/)

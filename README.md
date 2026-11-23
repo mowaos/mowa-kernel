@@ -42,10 +42,11 @@ a worked example that CI recomputes independently.
 ## Quick start
 
 Requirements: Rust 1.85 (installed automatically from `rust-toolchain.toml`), Node 20+,
-and the `wasm-bindgen` CLI at the version in `Cargo.lock`:
+and the `wasm-bindgen` CLI at the version in `Cargo.lock`. The CLI needs Rust 1.86 or
+later, so install it with stable Rust:
 
 ```bash
-cargo install wasm-bindgen-cli --version 0.2.126 --locked
+cargo +stable install wasm-bindgen-cli --version 0.2.126 --locked
 ```
 
 Run every test (Rust, WASM and the browser host):

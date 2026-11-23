@@ -16,7 +16,7 @@ jobs:
     name: Public gate
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: bash scripts/check-public.sh
 
   dco:
@@ -24,7 +24,7 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Every commit in the pull request has Signed-off-by
@@ -45,7 +45,7 @@ jobs:
     name: Rust (fmt, clippy, tests)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # rustup reads rust-toolchain.toml and installs the pinned toolchain.
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
@@ -57,23 +57,26 @@ jobs:
     name: Dependency licences and advisories
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: EmbarkStudios/cargo-deny-action@v2
 
   wasm:
     name: WASM, spec vectors and browser host
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install wasm-bindgen CLI (version pinned in Cargo.lock)
         run: |
           v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
-          cargo install wasm-bindgen-cli --version "$v" --locked
+          # The CLI is a build tool, not part of the kernel: it needs a newer Rust than the
+          # kernel's pinned toolchain (wasm-bindgen-cli 0.2.126 requires 1.86).
+          rustup toolchain install stable --profile minimal
+          cargo +stable install wasm-bindgen-cli --version "$v" --locked
       - run: npm install --global typescript@5.7.3
       - run: npm test
 
@@ -81,22 +84,25 @@ jobs:
     name: Reproducible WASM build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: first
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           path: elsewhere/second
       - run: rustup show
         working-directory: first
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Install wasm-bindgen CLI
         working-directory: first
         run: |
           v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
-          cargo install wasm-bindgen-cli --version "$v" --locked
+          # The CLI is a build tool, not part of the kernel: it needs a newer Rust than the
+          # kernel's pinned toolchain (wasm-bindgen-cli 0.2.126 requires 1.86).
+          rustup toolchain install stable --profile minimal
+          cargo +stable install wasm-bindgen-cli --version "$v" --locked
       - name: Build twice in different directories and compare
         run: |
           (cd first && bash js-smoke/run.sh)
