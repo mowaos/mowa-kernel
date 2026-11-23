@@ -1,0 +1,32 @@
+name: Security
+
+# Checks every Rust dependency against the RustSec advisory database, on every push
+# and pull request and again every week, so a new advisory against an existing
+# dependency is found even when nothing in this repo changes.
+#
+# Everything else runs in ci.yml (clippy, tests, licences and bans through cargo-deny,
+# the public gate). Secret scanning uses GitHub's own secret scanning and push
+# protection, which are enabled in the repository settings.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1" # Mondays 04:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisories:
+    name: RustSec advisories
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
