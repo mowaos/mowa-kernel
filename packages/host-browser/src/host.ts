@@ -19,6 +19,7 @@ import { MemoryStorage, type MowaStorage } from "./storage.js";
 import {
   FlowHandleNotFoundError,
   IdempotencyConflictError,
+  IncompleteStepHistoryError,
   type CanonicalEvent,
   type Commit,
   type DecisionContext,
@@ -269,9 +270,7 @@ export class MowaBrowserHost {
       const complete =
         steps.length === session.version + 1 && steps.every((s, i) => s.version === i);
       if (!complete) {
-        throw new Error(
-          `Session '${sessionId}' has an incomplete step history (${steps.length} steps for version ${session.version}); it cannot be exported for verification.`
-        );
+        throw new IncompleteStepHistoryError(sessionId, steps.length, session.version);
       }
 
       for (const step of steps) {

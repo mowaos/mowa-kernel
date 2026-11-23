@@ -36,7 +36,8 @@ rename below; the release date is set when the tag is pushed.
   `MowaBrowserHost.exportVerificationBundle(sessionIds)` exports cases in the
   verification bundle format (host contract, section 6.1). IndexedDB database version 3
   adds a `steps` store; 0.4 databases upgrade automatically, but sessions committed
-  before the upgrade cannot be exported.
+  before the upgrade cannot be exported: the export throws
+  `IncompleteStepHistoryError` (with `sessionId`, `stepCount` and `sessionVersion`).
 - **Release build:** absolute build paths are stripped from the WASM binary, so the
   release build is byte-identical wherever it is built (and contains no local paths).
 - **Docs:** README, [hashing specification](docs/hashing-spec.md) with a test vector

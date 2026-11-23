@@ -13,6 +13,7 @@ import {
   MemoryStorage,
   OutboxDispatcher,
   IdempotencyConflictError,
+  IncompleteStepHistoryError,
 } from "../dist/index.js";
 
 const require = createRequire(import.meta.url);
@@ -735,7 +736,15 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     await legacy.atomicCommit("S_OLD", null, commit, { intentHash: "x", inputs: { call: "start", event: {}, ctx: {} } });
     legacy.steps.clear();
     const legacyHost = new MowaBrowserHost(kernel, { storage: legacy, outboxDispatcher: new OutboxDispatcher(legacy) });
-    await assert.rejects(legacyHost.exportVerificationBundle(["S_OLD"]), /incomplete step history/);
+    await assert.rejects(legacyHost.exportVerificationBundle(["S_OLD"]), (err) => {
+      assert.ok(err instanceof IncompleteStepHistoryError);
+      assert.equal(err.name, "IncompleteStepHistoryError");
+      assert.equal(err.sessionId, "S_OLD");
+      assert.equal(err.stepCount, 0);
+      assert.equal(err.sessionVersion, 0);
+      assert.match(err.message, /incomplete step history/);
+      return true;
+    });
     await assert.rejects(host.exportVerificationBundle(["NOPE"]), /not found/);
   });
 });

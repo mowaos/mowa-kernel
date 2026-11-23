@@ -262,7 +262,8 @@ Known limits in 0.5.0:
 
 - **Sessions from earlier versions.** IndexedDB databases created by 0.4.x are upgraded
   automatically (database version 3 adds the `steps` store), but sessions committed
-  before the upgrade have no step records, so they cannot be exported for replay.
+  before the upgrade have no step records, so they cannot be exported for replay:
+  `exportVerificationBundle` throws `IncompleteStepHistoryError` for them.
 - **One browser profile only.** Web Locks serialise work within one profile. Shared
   cases across users or devices need a server host acting as the single writer.
 - Confirmations and rejections update the outbox record only; flows that need them in

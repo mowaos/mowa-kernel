@@ -235,3 +235,21 @@ export class FlowHandleNotFoundError extends Error {
     this.name = "FlowHandleNotFoundError";
   }
 }
+
+/**
+ * Thrown by `exportVerificationBundle` when a session's stored steps do not cover every
+ * version from 0 to the current one, for example a session committed before the 0.5.0
+ * storage upgrade. Such a session cannot be replayed, so it cannot be exported.
+ */
+export class IncompleteStepHistoryError extends Error {
+  constructor(
+    public readonly sessionId: string,
+    public readonly stepCount: number,
+    public readonly sessionVersion: number
+  ) {
+    super(
+      `Session '${sessionId}' has an incomplete step history (${stepCount} steps for version ${sessionVersion}); it cannot be exported for verification.`
+    );
+    this.name = "IncompleteStepHistoryError";
+  }
+}
