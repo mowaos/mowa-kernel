@@ -4,7 +4,7 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
-## 0.5.0 (unreleased)
+## 0.5.0 (2026-11-24)
 
 First public release, from the private 0.4.3 source. The minor version bump marks the
 rename below; the release date is set when the tag is pushed.
