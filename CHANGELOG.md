@@ -4,6 +4,17 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
+## Unreleased
+
+- **New npm package `@mowaos/verify` (0.5.0):** a CLI (`mowa-verify`) and library that
+  check a `mowa.verification-bundle/1` offline in two independent ways. It replays
+  every step on the bundled 0.5.0 kernel (the same binary as the release asset), and
+  it recomputes every hash from the hashing specification in plain JavaScript. It
+  verifies sessions whose flow was later deprecated. It rejects empty bundles,
+  duplicate sessions and a kernel version mismatch. No kernel, hash or contract
+  changes.
+- Test fixtures in `host-browser` and `mowa-flow` now use domain-neutral names.
+
 ## 0.5.0 (2026-11-24)
 
 First public release, from the private 0.4.3 source. The minor version bump marks the

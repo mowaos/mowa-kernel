@@ -2,6 +2,7 @@
 /target
 /pkg
 /pkg-web
+/packages/verify/wasm/
 node_modules/
 dist/
 

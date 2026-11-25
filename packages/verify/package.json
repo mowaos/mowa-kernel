@@ -1,0 +1,49 @@
+{
+  "name": "@mowaos/verify",
+  "version": "0.5.0",
+  "type": "module",
+  "description": "Independent CLI and library to verify MO·WA OS verification bundles via WASM replay and pure-JS canonical hashing",
+  "author": "Bruce Gardiner (ScrAtcH)",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mowa-verify": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc && node scripts/copy-wasm.mjs",
+    "pretest": "npm run build",
+    "test": "node --test tests/verify.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mowaos/mowa-kernel.git",
+    "directory": "packages/verify"
+  },
+  "keywords": [
+    "mowa",
+    "fsm",
+    "audit",
+    "verify",
+    "deterministic",
+    "replay",
+    "wasm"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

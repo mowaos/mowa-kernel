@@ -18,14 +18,16 @@ for f in LICENSE NOTICE README.md SECURITY.md TRADEMARKS.md CHANGELOG.md docs/ha
   [ -f "$f" ] || err "missing $f"
 done
 
-# Every published package (each crate, the npm package) ships LICENSE and NOTICE,
+# Every published package (each crate, each npm package) ships LICENSE and NOTICE,
 # identical to the ones at the root (Apache-2.0, section 4).
-for d in crates/* packages/host-browser; do
+for d in crates/* packages/*; do
   for f in LICENSE NOTICE; do
     cmp -s "$f" "$d/$f" || err "$d/$f is missing or differs from ./$f"
   done
 done
-grep -q '"NOTICE"' packages/host-browser/package.json || err "packages/host-browser/package.json files must list NOTICE"
+for pkgjson in packages/*/package.json; do
+  grep -q '"NOTICE"' "$pkgjson" || err "$pkgjson files must list NOTICE"
+done
 
 # 2. Build outputs and secrets must not be tracked.
 echo "$files" | grep -E '(^|/)(target|pkg|pkg-web|dist|node_modules)/' && err "build output is tracked"
@@ -48,7 +50,8 @@ fi
 cargo_v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
 root_v=$(node -p 'require("./package.json").version')
 host_v=$(node -p 'require("./packages/host-browser/package.json").version')
-[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v"
+verify_v=$(node -p 'require("./packages/verify/package.json").version')
+[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] && [ "$cargo_v" = "$verify_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v, verify $verify_v"
 bad_pins=$(grep -E '^mowa-[a-z]+ = \{ path = ' Cargo.toml | grep -v "version = \"=$cargo_v\"" || true)
 [ -z "$bad_pins" ] || err "workspace crate pins do not match $cargo_v: $bad_pins"
 if [ -n "${1:-}" ] && [ "$1" != "v$cargo_v" ]; then err "tag $1 does not match version v$cargo_v"; fi

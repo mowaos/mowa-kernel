@@ -21,14 +21,14 @@ const wasmPkg = require("../../../pkg/mowa_wasm.js");
 
 function sampleFlow() {
   return {
-    id: "LOGISTICS_FLOW",
+    id: "APPROVAL_FLOW",
     version: "1.0.0",
     status: "ACTIVE",
     startNode: "INTAKE",
-    startActors: ["SYSTEM", "FORWARDER"],
+    startActors: ["SYSTEM", "OPERATOR"],
     effectiveFrom: 0,
     declaredFacts: {
-      "doc:commercial_invoice": ["MISSING", "VERIFIED", "CONFLICTED"],
+      "doc:invoice": ["MISSING", "VERIFIED", "CONFLICTED"],
     },
     nodes: {
       INTAKE: {
@@ -38,11 +38,11 @@ function sampleFlow() {
         onEnter: [{ kind: "EMIT_INTAKE_NOTIFICATION" }],
         transitions: {
           SUBMIT_DOCS: {
-            to: "CUSTOMS_VERIFIED",
-            allowedActors: ["SYSTEM", "FORWARDER"],
+            to: "APPROVED",
+            allowedActors: ["SYSTEM", "OPERATOR"],
             guard: {
               op: "status_is",
-              target: "doc:commercial_invoice",
+              target: "doc:invoice",
               status: "VERIFIED",
             },
             onGuardFail: "REVIEW",
@@ -53,20 +53,20 @@ function sampleFlow() {
         id: "REVIEW",
         type: "t",
         tier: "T2",
-        onEnter: [{ kind: "DRAFT_CHASER_EMAIL", payload: { reason: "Missing invoice" } }],
+        onEnter: [{ kind: "REQUEST_REVIEW", payload: { reason: "Missing invoice" } }],
         transitions: {
           RESOLVE: {
-            to: "CUSTOMS_VERIFIED",
-            allowedActors: ["FORWARDER"],
+            to: "APPROVED",
+            allowedActors: ["OPERATOR"],
           },
         },
       },
-      CUSTOMS_VERIFIED: {
-        id: "CUSTOMS_VERIFIED",
+      APPROVED: {
+        id: "APPROVED",
         type: "t",
         tier: "T1",
         terminal: true,
-        onEnter: [{ kind: "DISPATCH_CARRIER_CLEARANCE" }],
+        onEnter: [{ kind: "EMIT_APPROVED" }],
       },
     },
   };
@@ -87,7 +87,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
 
     const stored = await storage.getFlow(flowHash);
     assert.ok(stored);
-    assert.equal(stored.id, "LOGISTICS_FLOW");
+    assert.equal(stored.id, "APPROVAL_FLOW");
   });
 
   it("2. startSession creates session version 0 and writes atomic 4-store commit", async () => {
@@ -100,10 +100,10 @@ describe("MowaBrowserHost End-to-End Suite", () => {
       id: "EVT_1",
       type: "INITIALIZE",
       source: "chrome_extension_action",
-      caseId: "CONTAINER_MSK_9921",
+      caseId: "CASE_9921",
       timestamp: 1000,
       idempotencyKey: "idem_start_1",
-      actor: { type: "FORWARDER", id: "OPERATOR_ALICE" },
+      actor: { type: "OPERATOR", id: "OPERATOR_ALICE" },
       payload: {},
     };
     const ctx = { asOf: 1000, contextRefs: { manifestVersion: "2026.11" } };
@@ -176,10 +176,10 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         id: "EVT_INIT",
         type: "INITIALIZE",
         source: "action_card",
-        caseId: "CONTAINER_ADV",
+        caseId: "CASE_ADV",
         timestamp: 1000,
         idempotencyKey: "idem_init",
-        actor: { type: "FORWARDER", id: "BOB" },
+        actor: { type: "OPERATOR", id: "BOB" },
         payload: {},
       },
       flowHash,
@@ -193,30 +193,30 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         id: "EVT_DOCS",
         type: "SUBMIT_DOCS",
         source: "action_card",
-        caseId: "CONTAINER_ADV",
+        caseId: "CASE_ADV",
         timestamp: 2000,
         idempotencyKey: "idem_docs",
-        actor: { type: "FORWARDER", id: "BOB" },
+        actor: { type: "OPERATOR", id: "BOB" },
         payload: {},
       },
       facts: {
-        facts: { "doc:commercial_invoice": "VERIFIED" },
+        facts: { "doc:invoice": "VERIFIED" },
       },
       ctx: { asOf: 2000, contextRefs: {} },
     });
 
-    assert.equal(advanceCommit.newSession.state, "CUSTOMS_VERIFIED");
+    assert.equal(advanceCommit.newSession.state, "APPROVED");
     assert.equal(advanceCommit.newSession.version, 1);
     assert.equal(advanceCommit.audit.fromState, "INTAKE");
-    assert.equal(advanceCommit.audit.toState, "CUSTOMS_VERIFIED");
-    assert.equal(advanceCommit.outbox[0].kind, "DISPATCH_CARRIER_CLEARANCE");
+    assert.equal(advanceCommit.audit.toState, "APPROVED");
+    assert.equal(advanceCommit.outbox[0].kind, "EMIT_APPROVED");
     assert.equal(advanceCommit.audit.prevResultHash, startCommit.audit.resultHash);
     assert.equal(advanceCommit.newSession.lastResultHash, advanceCommit.audit.resultHash);
 
     // Verify session updated in storage
     const updated = await storage.getSession(sessionId);
     assert.equal(updated?.version, 1);
-    assert.equal(updated?.state, "CUSTOMS_VERIFIED");
+    assert.equal(updated?.state, "APPROVED");
   });
 
   it("5. guard failure routes deterministically to REVIEW with Pre-fill outbox", async () => {
@@ -256,14 +256,14 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         payload: {},
       },
       facts: {
-        facts: { "doc:commercial_invoice": "MISSING" },
+        facts: { "doc:invoice": "MISSING" },
       },
       ctx: { asOf: 2000, contextRefs: {} },
     });
 
     assert.equal(commit.newSession.state, "REVIEW");
     assert.equal(commit.audit.guardFailed, true);
-    assert.equal(commit.outbox[0].kind, "DRAFT_CHASER_EMAIL");
+    assert.equal(commit.outbox[0].kind, "REQUEST_REVIEW");
   });
 
   it("6. outbox dispatcher handles AWAIT_CONFIRMATION without attempt increment, reject, and confirm", async () => {
@@ -273,7 +273,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     const { flowHash } = await host.installFlow(sampleFlow());
 
     let emailDrafted = false;
-    outbox.registerHandler("DRAFT_CHASER_EMAIL", async (record) => {
+    outbox.registerHandler("REQUEST_REVIEW", async (record) => {
       emailDrafted = true;
       // Pre-filled action card awaiting human confirmation
       return "AWAIT_CONFIRMATION";
@@ -308,7 +308,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         actor: { type: "SYSTEM", id: "S" },
         payload: {},
       },
-      facts: { facts: { "doc:commercial_invoice": "MISSING" } },
+      facts: { facts: { "doc:invoice": "MISSING" } },
       ctx: { asOf: 2, contextRefs: {} },
     });
 
@@ -353,7 +353,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     const host = new MowaBrowserHost(kernel, { storage, outboxDispatcher: outbox });
     const { flowHash } = await host.installFlow(sampleFlow());
 
-    // Register handler for INTAKE effect but leave DRAFT_CHASER_EMAIL unhandled
+    // Register handler for INTAKE effect but leave REQUEST_REVIEW unhandled
     let intakeHandled = false;
     outbox.registerHandler("EMIT_INTAKE_NOTIFICATION", async () => {
       intakeHandled = true;
@@ -377,7 +377,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
       ctx: { asOf: 1, contextRefs: {} },
     });
 
-    // Advance creates DRAFT_CHASER_EMAIL which has NO handler registered
+    // Advance creates REQUEST_REVIEW which has NO handler registered
     await host.advanceSession({
       sessionId,
       event: {
@@ -390,24 +390,24 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         actor: { type: "SYSTEM", id: "S" },
         payload: {},
       },
-      facts: { facts: { "doc:commercial_invoice": "MISSING" } },
+      facts: { facts: { "doc:invoice": "MISSING" } },
       ctx: { asOf: 2, contextRefs: {} },
     });
 
     // Intake effect was already handled during startSession
     assert.equal(intakeHandled, true);
 
-    // DRAFT_CHASER_EMAIL was unhandled: verify it was deferred with grace interval
+    // REQUEST_REVIEW was unhandled: verify it was deferred with grace interval
     const pending = await storage.getPendingOutbox(10, Date.now() + 20000);
-    const unhandledRecord = pending.find((p) => p.effect.kind === "DRAFT_CHASER_EMAIL");
+    const unhandledRecord = pending.find((p) => p.effect.kind === "REQUEST_REVIEW");
     assert.ok(unhandledRecord);
     assert.equal(unhandledRecord.status, "PENDING");
     assert.ok(unhandledRecord.nextAttemptAt > 0);
 
     // Register handler now (simulating late registration in service worker)
-    let chaserHandled = false;
-    outbox.registerHandler("DRAFT_CHASER_EMAIL", async () => {
-      chaserHandled = true;
+    let reviewHandled = false;
+    outbox.registerHandler("REQUEST_REVIEW", async () => {
+      reviewHandled = true;
       return "SUCCESS";
     });
 
@@ -417,7 +417,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     });
     const res = await outbox.dispatchPending();
     assert.equal(res.processed, 1);
-    assert.equal(chaserHandled, true);
+    assert.equal(reviewHandled, true);
   });
 
   it("7b. requeueEffect clears unhandledSince and lastError, giving fresh grace period", async () => {
@@ -459,12 +459,12 @@ describe("MowaBrowserHost End-to-End Suite", () => {
         actor: { type: "SYSTEM", id: "S" },
         payload: {},
       },
-      facts: { facts: { "doc:commercial_invoice": "MISSING" } },
+      facts: { facts: { "doc:invoice": "MISSING" } },
       ctx: { asOf: 2, contextRefs: {} },
     });
 
     const pending = await storage.getPendingOutbox(10, Date.now() + 20000);
-    const unhandled = pending.find((p) => p.effect.kind === "DRAFT_CHASER_EMAIL");
+    const unhandled = pending.find((p) => p.effect.kind === "REQUEST_REVIEW");
     assert.ok(unhandled);
 
     // Simulate grace period expiry (past 1000ms)
@@ -622,7 +622,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
           actor: { type: "SYSTEM", id: "S" },
           payload: {},
         },
-        facts: { facts: { "doc:commercial_invoice": "VERIFIED" } },
+        facts: { facts: { "doc:invoice": "VERIFIED" } },
         ctx: { asOf: 10 + i, contextRefs: {} },
       })
     );
@@ -685,11 +685,11 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     });
 
     await host.startSession({ sessionId, event: ev("E0", "INIT", "SYSTEM", 1000), flowHash, ctx: { asOf: 1000 } });
-    const facts = { facts: { "doc:commercial_invoice": "MISSING", "other:ignored": "X" } };
-    const submit = { sessionId, event: ev("E1", "SUBMIT_DOCS", "FORWARDER", 2000), facts, ctx: { asOf: 2000, contextRefs: { feed: "v1" } } };
+    const facts = { facts: { "doc:invoice": "MISSING", "other:ignored": "X" } };
+    const submit = { sessionId, event: ev("E1", "SUBMIT_DOCS", "OPERATOR", 2000), facts, ctx: { asOf: 2000, contextRefs: { feed: "v1" } } };
     await host.advanceSession(submit);
     await host.advanceSession(submit); // duplicate delivery: returns the stored commit, adds no step
-    await host.advanceSession({ sessionId, event: ev("E2", "RESOLVE", "FORWARDER", 3000), ctx: { asOf: 3000 } });
+    await host.advanceSession({ sessionId, event: ev("E2", "RESOLVE", "OPERATOR", 3000), ctx: { asOf: 3000 } });
 
     const steps = await storage.getSteps(sessionId);
     assert.deepEqual(steps.map((s) => [s.call, s.version]), [["start", 0], ["advance", 1], ["advance", 2]]);
@@ -766,7 +766,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     // 1. The caller changes its event while the commit is waiting on storage.
     const event = {
       id: "EVT_SNAP", type: "INITIALIZE", source: "test", caseId: "CASE_SNAP", timestamp: 1000,
-      idempotencyKey: "idem_snap", actor: { type: "FORWARDER", id: "A" }, payload: { amount: 1 },
+      idempotencyKey: "idem_snap", actor: { type: "OPERATOR", id: "A" }, payload: { amount: 1 },
     };
     const ctx = { asOf: 1000, contextRefs: { ref: "r1" } };
     const pending = host.startSession({ sessionId: "S_SNAP", event, flowHash, ctx });
@@ -782,7 +782,7 @@ describe("MowaBrowserHost End-to-End Suite", () => {
     let reads = 0;
     const tricky = {
       id: "EVT_GET", type: "INITIALIZE", source: "test", caseId: "CASE_GET", timestamp: 1000,
-      actor: { type: "FORWARDER", id: "A" }, payload: {},
+      actor: { type: "OPERATOR", id: "A" }, payload: {},
     };
     Object.defineProperty(tricky, "idempotencyKey", { enumerable: true, get: () => `k${reads++}` });
     const c2 = await host.startSession({ sessionId: "S_GET", event: tricky, flowHash, ctx: { asOf: 1000, contextRefs: {} } });

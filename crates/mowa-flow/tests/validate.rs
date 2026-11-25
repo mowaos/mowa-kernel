@@ -145,7 +145,7 @@ fn content_hash_ignores_lifecycle_fields_only() {
     assert_eq!(base.content_hash(), lifecycle.content_hash());
 
     let mut behaviour = mk();
-    behaviour.start_actors.insert("FORWARDER".to_string());
+    behaviour.start_actors.insert("AUDITOR".to_string());
     let behaviour = ValidatedFlow::new(behaviour).unwrap();
     assert_ne!(base.content_hash(), behaviour.content_hash());
 }
