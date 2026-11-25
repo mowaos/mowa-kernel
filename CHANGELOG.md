@@ -4,7 +4,10 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
-## Unreleased
+## `@mowaos/verify` 0.5.0 (2026-11-25)
+
+Published to npm from commit `afbf244` (signed tag `verify-v0.5.0`). Kernel, crates
+and `@mowaos/host-browser` stay at 0.5.0, unchanged.
 
 - **New npm package `@mowaos/verify` (0.5.0):** a CLI (`mowa-verify`) and library that
   check a `mowa.verification-bundle/1` offline in two independent ways. It replays
