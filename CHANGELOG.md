@@ -4,6 +4,12 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
+## Unreleased
+
+- **Benchmarks:** `npm run bench` (Node and native Rust) and `npm run bench:browser`
+  (headless Chrome) time the same requests in each runtime. Method and 0.5.0 results
+  are in [docs/benchmarks.md](docs/benchmarks.md). No kernel changes.
+
 ## `@mowaos/kernel` 0.5.0 (2026-11-25)
 
 Published to npm from commit `20b316c` (signed tag `kernel-v0.5.0`). Kernel, crates

@@ -1,0 +1,28 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MO·WA OS kernel benchmark</title>
+<pre id="out">Running… (takes about a minute)</pre>
+<script type="module">
+  import { loadKernel } from "../packages/kernel/dist/browser.js";
+  import * as hostLib from "../packages/host-browser/dist/index.js";
+  import { formatTable, runHostScenario, runKernelScenarios } from "./core.mjs";
+
+  const out = document.getElementById("out");
+  const report = (body) =>
+    fetch("/result", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => {});
+  try {
+    const kernel = await loadKernel();
+    const now = () => performance.now();
+    const rows = [...runKernelScenarios(kernel, now), ...(await runHostScenario(hostLib, kernel, now))];
+    const env = {
+      runtime: navigator.userAgent,
+      crossOriginIsolated: self.crossOriginIsolated,
+      kernelVersion: kernel.kernelVersion(),
+    };
+    out.textContent = formatTable(rows);
+    await report({ env, rows });
+  } catch (err) {
+    out.textContent = `Error: ${err}`;
+    await report({ error: String(err) });
+  }
+</script>

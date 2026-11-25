@@ -117,6 +117,7 @@ dead ends, undeclared facts and unknown targets are rejected.
 | [Kernel specification](docs/kernel-spec.md) | What `start` and `advance` do, step by step, and every error |
 | [Hashing specification](docs/hashing-spec.md) | Canonical JSON, every hash and identifier, the audit chain, how to verify |
 | [Host contract](docs/host-contract.md) | What a host must do: the WASM interface, atomic commits, duplicates, effects, what to keep for verification |
+| [Benchmarks](docs/benchmarks.md) | How fast a decision is in native Rust, Node and Chrome, how it was measured, and how to run it yourself |
 | [Conformance cases](docs/vectors) | Inputs and expected results for each rule, run in CI against the kernel and an independent JavaScript implementation of the hashing rules |
 
 The specifications are precise enough to write a second implementation; the

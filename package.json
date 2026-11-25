@@ -19,6 +19,8 @@
     "build:verify": "npm --prefix packages/verify run build",
     "test:kernel": "npm --prefix packages/kernel test",
     "build:kernel": "npm --prefix packages/kernel run build",
+    "bench": "node bench/run-node.mjs && cargo run --release -q -p mowa-wasm --example bench -- target/bench/fixtures.json",
+    "bench:browser": "node bench/run-browser.mjs",
     "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel"
   },
   "repository": {
