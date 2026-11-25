@@ -4,7 +4,10 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
-## Unreleased
+## `@mowaos/kernel` 0.5.0 (2026-11-25)
+
+Published to npm from commit `20b316c` (signed tag `kernel-v0.5.0`). Kernel, crates
+and the other npm packages are unchanged.
 
 - **New npm package `@mowaos/kernel` (0.5.0):** the kernel for Node and browsers
   without a Rust toolchain or `wasm-bindgen`. `await loadKernel()` returns the JSON
