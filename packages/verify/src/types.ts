@@ -57,9 +57,12 @@ export interface VerificationBundle {
 }
 
 export interface VerifyOptions {
-  /** Optional pre-loaded WASM module; if omitted, loads bundled wasm or `wasmPath`. */
+  /**
+   * The kernel to replay with, e.g. `await loadKernel()` from `@mowaos/kernel`.
+   * Required in browsers. In Node, defaults to `wasmPath` or the bundled kernel.
+   */
   wasm?: WasmBindings;
-  /** Optional path to a custom `mowa_wasm.js` CommonJS/ESM module. */
+  /** Node only: path to a custom `mowa_wasm.js` module. */
   wasmPath?: string;
 }
 

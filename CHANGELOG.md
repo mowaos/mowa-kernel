@@ -4,6 +4,15 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
+## Unreleased
+
+- **`@mowaos/verify` runs in browsers.** The same `verifyBundle` API works in Vite,
+  webpack and plain browsers; pass the kernel with
+  `{ wasm: await loadKernel() }` from `@mowaos/kernel`. In Node, hashing still uses
+  `node:crypto`. Elsewhere it uses a built-in SHA-256, tested against `node:crypto`,
+  chosen through the package's `imports` map. No Node APIs remain in the shared code.
+  The CLI and the Node API are unchanged.
+
 ## 0.5.1 (2026-11-25)
 
 A performance release. Decisions are unchanged: every `flowHash`, `decisionHash`,

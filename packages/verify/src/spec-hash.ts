@@ -1,8 +1,22 @@
 /**
- * Independent implementation of docs/hashing-spec.md in plain TypeScript/JavaScript
- * using only `node:crypto`, sharing zero code with the Rust/WASM kernel.
+ * Independent implementation of docs/hashing-spec.md in plain TypeScript, sharing no
+ * code with the Rust/WASM kernel. SHA-256 comes from `node:crypto` in Node and from a
+ * plain TypeScript implementation elsewhere (package.json "imports": "#sha256").
  */
-import { createHash } from "node:crypto";
+import { sha256HexUtf8 } from "#sha256";
+
+const utf8 = new TextEncoder();
+
+/** Compare two strings by their UTF-8 bytes, as the spec orders sets. */
+function compareUtf8(a: string, b: string): number {
+  const x = utf8.encode(a);
+  const y = utf8.encode(b);
+  const n = Math.min(x.length, y.length);
+  for (let i = 0; i < n; i += 1) {
+    if (x[i] !== y[i]) return x[i]! - y[i]!;
+  }
+  return x.length - y.length;
+}
 
 export function canon(x: unknown): string {
   if (x === null || typeof x !== "object") {
@@ -23,14 +37,12 @@ export function canon(x: unknown): string {
 }
 
 export function sha256Hex(x: unknown): string {
-  return createHash("sha256").update(canon(x), "utf8").digest("hex");
+  return sha256HexUtf8(canon(x));
 }
 
 function sortedSet(xs: unknown): string[] {
   if (!Array.isArray(xs)) return [];
-  return [...new Set(xs.map(String))].sort((a, b) =>
-    Buffer.compare(Buffer.from(a, "utf8"), Buffer.from(b, "utf8"))
-  );
+  return [...new Set(xs.map(String))].sort(compareUtf8);
 }
 
 export function flowContent(f: Record<string, unknown>): Record<string, unknown> {

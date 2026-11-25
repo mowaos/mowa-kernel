@@ -13,7 +13,15 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "node": "./dist/index.js",
+      "default": "./dist/browser.js"
+    }
+  },
+  "imports": {
+    "#sha256": {
+      "types": "./dist/sha256.d.ts",
+      "node": "./dist/sha256-node.js",
+      "default": "./dist/sha256.js"
     }
   },
   "files": [

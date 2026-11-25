@@ -313,3 +313,42 @@ describe("@mowaos/verify", () => {
     assert.ok(report.errors.some((e) => e.scope === "session" && /more than once/.test(e.message)));
   });
 });
+
+describe("@mowaos/verify in browsers (no Node APIs)", () => {
+  it("15. plain-TypeScript SHA-256 matches node:crypto", async () => {
+    const { createHash } = await import("node:crypto");
+    const { sha256HexUtf8 } = await import("../dist/sha256.js");
+    const ref = (s) => createHash("sha256").update(s, "utf8").digest("hex");
+    assert.equal(sha256HexUtf8(""), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    assert.equal(sha256HexUtf8("abc"), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    // Every length across the padding boundaries (55/56/64 bytes and multiples).
+    for (let n = 0; n < 300; n += 1) assert.equal(sha256HexUtf8("a".repeat(n)), ref("a".repeat(n)), `length ${n}`);
+    for (const s of ["é", "日本語", "😀 emoji", "\u0000\u001f\"\\", "x".repeat(10_000) + "ß"]) {
+      assert.equal(sha256HexUtf8(s), ref(s), JSON.stringify(s.slice(0, 20)));
+    }
+  });
+
+  it("16. jsonEqual ignores key order and spots any difference", async () => {
+    const { jsonEqual } = await import("../dist/index.js");
+    assert.equal(jsonEqual({ a: 1, b: [1, { c: null }] }, { b: [1, { c: null }], a: 1 }), true);
+    assert.equal(jsonEqual({ a: 1 }, { a: 1, b: 2 }), false);
+    assert.equal(jsonEqual([1, 2], [2, 1]), false);
+    assert.equal(jsonEqual({ a: [] }, { a: {} }), false);
+    assert.equal(jsonEqual({ a: "1" }, { a: 1 }), false);
+    assert.equal(jsonEqual(null, {}), false);
+  });
+
+  it("17. browser entry verifies with a kernel passed in, and asks for one if missing", async () => {
+    const browser = await import("../dist/browser.js");
+    const bundle = await buildSampleBundle();
+    const ok = await browser.verifyBundle(bundle, { wasm: wasmPkg });
+    assert.deepEqual(ok.errors, []);
+    assert.equal(ok.ok, true);
+
+    const tampered = clone(bundle);
+    tampered.sessions[0].steps[1].commit.audit.decisionHash = "0".repeat(64);
+    assert.equal((await browser.verifyBundle(tampered, { wasm: wasmPkg })).ok, false);
+
+    await assert.rejects(() => browser.verifyBundle(bundle), /pass the kernel/);
+  });
+});
