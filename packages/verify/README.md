@@ -11,7 +11,7 @@ It verifies exported decision histories using **two independent paths**:
 
 A PASS proves that every recorded decision follows from its recorded inputs, and that no record in the bundle was changed after it was written.
 
-- **Same kernel version.** Replay needs the kernel version the bundle was recorded with. A bundle from another version fails with a `kernelVersion` error; use the matching `@mowaos/verify` release, or pass `--wasm`.
+- **Same kernel version.** Replay needs the kernel version the bundle was recorded with. A bundle from another version fails with a `kernelVersion` error; use the matching `@mowaos/verify` release, or pass `--wasm`. For example, a bundle with `"kernelVersion": "0.5.0"` verifies with `npx @mowaos/verify@0.5.0 bundle.json`.
 - **Lifecycle changes are fine.** `status`, `effectiveFrom` and `effectiveTo` are not part of `flowHash`, so a flow deprecated after its sessions ran still verifies.
 - **Completeness needs an anchor.** A bundle is self-contained. Someone holding it can drop its latest steps, or build a whole new history from scratch, and it will still verify. To prove a bundle is complete and original, compare its final `resultHash` with a copy held elsewhere, such as a timestamp, a signed receipt or the counterparty's record.
 

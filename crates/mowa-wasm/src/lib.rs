@@ -7,17 +7,18 @@
 //!                 response = { status: "OK", flowHandle, flowHash } | { status: "FLOW_INVALID", errors }
 //!   dedupKeyJson  request = { op: "START" | "ADVANCE", sessionId, event }
 //!                 response = { status: "OK", dedupKey } | { status: "BAD_REQUEST", reason }
-//!   kernelVersion response = string (e.g. "0.5.0")
+//!   kernelVersion response = string (e.g. "0.5.1")
 //!
 //! In `startJson` and `advanceJson`, the `flow` field can be EITHER:
 //!   1. A full `FlowDefinition` JSON object, OR
 //!   2. A cached `flowHandle` string returned by `loadFlowJson`.
 //!
 //! Using `flowHandle` avoids re-parsing, re-validating and re-hashing the flow graph on
-//! every call.
+//! every call. Cached flows are shared, not copied, so a call with a handle costs the
+//! same whatever the size of the flow.
 
 use std::collections::BTreeMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use mowa_core::{
     advance, advance_dedup_key, start, start_dedup_key, AdvanceInput, CanonicalEvent, Commit,
@@ -29,7 +30,7 @@ use wasm_bindgen::prelude::*;
 
 const MAX_CACHE_CAPACITY: usize = 32;
 
-static FLOW_CACHE: Mutex<BTreeMap<String, (u64, ValidatedFlow)>> = Mutex::new(BTreeMap::new());
+static FLOW_CACHE: Mutex<BTreeMap<String, (u64, Arc<ValidatedFlow>)>> = Mutex::new(BTreeMap::new());
 static ACCESS_COUNTER: Mutex<u64> = Mutex::new(0);
 
 fn next_counter() -> u64 {
@@ -137,7 +138,7 @@ fn cache_key_for(flow: &ValidatedFlow) -> String {
     )
 }
 
-fn store_in_cache(flow: ValidatedFlow) -> String {
+fn store_in_cache(flow: Arc<ValidatedFlow>) -> String {
     let key = cache_key_for(&flow);
     let counter = next_counter();
     if let Ok(mut cache) = FLOW_CACHE.lock() {
@@ -156,13 +157,13 @@ fn store_in_cache(flow: ValidatedFlow) -> String {
     key
 }
 
-fn resolve_flow(input: FlowInput) -> Result<ValidatedFlow, Response> {
+fn resolve_flow(input: FlowInput) -> Result<Arc<ValidatedFlow>, Response> {
     match input {
         FlowInput::Handle(handle) => {
             if let Ok(mut cache) = FLOW_CACHE.lock() {
                 if let Some((counter, flow)) = cache.get_mut(&handle) {
                     *counter = next_counter();
-                    return Ok(flow.clone());
+                    return Ok(Arc::clone(flow));
                 }
             }
             Err(Response::FlowHandleNotFound { handle })
@@ -170,7 +171,8 @@ fn resolve_flow(input: FlowInput) -> Result<ValidatedFlow, Response> {
         FlowInput::Def(def) => match ValidatedFlow::new(*def) {
             Err(errors) => Err(Response::FlowInvalid { errors }),
             Ok(flow) => {
-                store_in_cache(flow.clone());
+                let flow = Arc::new(flow);
+                store_in_cache(Arc::clone(&flow));
                 Ok(flow)
             }
         },
@@ -186,7 +188,7 @@ pub fn load_flow_json_impl(input: &str) -> String {
             Err(errors) => LoadFlowResponse::FlowInvalid { errors },
             Ok(flow) => {
                 let flow_hash = flow.content_hash().to_owned();
-                let flow_handle = store_in_cache(flow);
+                let flow_handle = store_in_cache(Arc::new(flow));
                 LoadFlowResponse::Ok {
                     flow_handle,
                     flow_hash,

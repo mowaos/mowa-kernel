@@ -1,6 +1,6 @@
 {
   "name": "@mowaos/kernel",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "description": "MO·WA OS kernel as one npm package: the same WASM binary for Node and browsers, with no build tools needed",
   "author": "Bruce Gardiner (ScrAtcH)",

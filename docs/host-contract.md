@@ -32,7 +32,7 @@ JSON response.
 | `startJson` | `{sessionId, event, flow, ctx}` | `{status: "OK", commit}` |
 | `advanceJson` | `{session, event, flow, facts?, ctx}` | `{status: "OK", commit}` |
 | `dedupKeyJson` | `{op: "START" \| "ADVANCE", sessionId, event}` | `{status: "OK", dedupKey, intentHash}` |
-| `kernelVersion` | (none) | The version as a plain string, e.g. `"0.5.0"` |
+| `kernelVersion` | (none) | The version as a plain string, e.g. `"0.5.1"` |
 
 Request and response objects follow kernel-spec.md (events, context, facts, sessions,
 commits) and reject unknown fields.
@@ -173,7 +173,7 @@ host SHOULD be able to export everything about a case as one JSON document:
 ```json
 {
   "format": "mowa.verification-bundle/1",
-  "kernelVersion": "0.5.0",
+  "kernelVersion": "0.5.1",
   "flows": { "<flowHash>": { "…": "flow definition" } },
   "sessions": [
     {
@@ -258,7 +258,7 @@ that the host and its operator run, not of the kernel alone.
 | 6 | Flows are stored by hash; every step's inputs and commit in the `steps` store (`getSteps`); `exportVerificationBundle` writes section 6.1's format |
 | 7 | Not built in: the browser host has no agent connection. Code that lets an agent call it must apply section 7, in particular setting the actor and the facts itself |
 
-Known limits in 0.5.0:
+Known limits in 0.5.x:
 
 - **Sessions from earlier versions.** IndexedDB databases created by 0.4.x are upgraded
   automatically (database version 3 adds the `steps` store), but sessions committed

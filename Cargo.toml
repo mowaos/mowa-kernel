@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/mowa-canon", "crates/mowa-flow", "crates/mowa-core", "crates/mowa-wasm", "crates/mowa-kernel"]
 
 [workspace.package]
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 rust-version = "1.85"
 license = "Apache-2.0"
@@ -20,9 +20,9 @@ serde_json = "1"
 sha2 = "0.10"
 proptest = "1"
 wasm-bindgen = "0.2"
-mowa-canon = { path = "crates/mowa-canon", version = "=0.5.0" }
-mowa-flow = { path = "crates/mowa-flow", version = "=0.5.0" }
-mowa-core = { path = "crates/mowa-core", version = "=0.5.0" }
+mowa-canon = { path = "crates/mowa-canon", version = "=0.5.1" }
+mowa-flow = { path = "crates/mowa-flow", version = "=0.5.1" }
+mowa-core = { path = "crates/mowa-core", version = "=0.5.1" }
 
 # Strict determinism and safety lints
 [workspace.lints.rust]
@@ -38,7 +38,9 @@ indexing_slicing = "deny"
 float_arithmetic = "deny"
 
 [profile.release]
-opt-level = "s"
+# Optimised for speed: measured 41% faster in WASM than "s", for 4% more gzipped size
+# (docs/benchmarks.md). The build stays reproducible: same toolchain, same flags.
+opt-level = 3
 lto = true
 codegen-units = 1
 panic = "abort"

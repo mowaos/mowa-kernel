@@ -160,7 +160,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "mowa-canon"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "proptest",
  "serde",
@@ -170,7 +170,7 @@ dependencies = [
 
 [[package]]
 name = "mowa-core"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "mowa-canon",
  "mowa-flow",
@@ -181,7 +181,7 @@ dependencies = [
 
 [[package]]
 name = "mowa-flow"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "mowa-canon",
  "serde",
@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "mowa-kernel"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "mowa-canon",
  "mowa-core",
@@ -199,7 +199,7 @@ dependencies = [
 
 [[package]]
 name = "mowa-wasm"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "mowa-canon",
  "mowa-core",

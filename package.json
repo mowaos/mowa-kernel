@@ -1,6 +1,6 @@
 {
   "name": "mowa-kernel-monorepo",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "MO·WA OS - Foundational Deterministic FSM Execution Kernel",
   "author": "Bruce Gardiner (ScrAtcH)",

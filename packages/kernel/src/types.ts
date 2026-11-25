@@ -14,7 +14,7 @@ export interface MowaKernel {
   advanceJson(input: string): string;
   /** `{op, sessionId, event}` → `{status: "OK", dedupKey, intentHash}` */
   dedupKeyJson(input: string): string;
-  /** The kernel version, e.g. `"0.5.0"`. It is recorded in every audit record. */
+  /** The kernel version, e.g. `"0.5.1"`. It is recorded in every audit record. */
   kernelVersion(): string;
 }
 

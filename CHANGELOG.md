@@ -4,11 +4,25 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
-## Unreleased
+## 0.5.1 (2026-11-25)
 
+A performance release. Decisions are unchanged: every `flowHash`, `decisionHash`,
+`factsHash`, identifier and outbox entry is the same as in 0.5.0. As on every release,
+`kernelVersion` in audit records changes (to `0.5.1`), and with it each `resultHash`.
+
+- **Calls with a flow handle no longer slow down with flow size.** Cached flows are
+  shared instead of copied on every call. `advance` with a handle on a 200-node flow
+  went from 298 to 62 µs in Chrome.
+- **The release build is optimised for speed** (`opt-level = 3`, was `"s"`): 41% faster
+  in WASM. The binary is 8% smaller raw and 4% larger gzipped (182 kB).
 - **Benchmarks:** `npm run bench` (Node and native Rust) and `npm run bench:browser`
-  (headless Chrome) time the same requests in each runtime. Method and 0.5.0 results
-  are in [docs/benchmarks.md](docs/benchmarks.md). No kernel changes.
+  (headless Chrome) time the same requests in each runtime. Method and results for
+  0.5.0 and 0.5.1 are in [docs/benchmarks.md](docs/benchmarks.md).
+- **All packages move to 0.5.1:** the crates, `@mowaos/kernel`, `@mowaos/host-browser`
+  (no code changes) and `@mowaos/verify`, which now bundles the 0.5.1 kernel. Bundles
+  recorded with 0.5.0 verify with `npx @mowaos/verify@0.5.0`.
+- `docs/vectors/basic-approval.json` and the worked example in the hashing
+  specification carry the 0.5.1 result hashes.
 
 ## `@mowaos/kernel` 0.5.0 (2026-11-25)
 
