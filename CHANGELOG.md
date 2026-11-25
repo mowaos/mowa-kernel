@@ -4,6 +4,14 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
+## Unreleased
+
+- **New npm package `@mowaos/kernel` (0.5.0):** the kernel for Node and browsers
+  without a Rust toolchain or `wasm-bindgen`. `await loadKernel()` returns the JSON
+  boundary that `@mowaos/host-browser` and `@mowaos/verify` already accept. It ships
+  one `mowa_wasm_bg.wasm`, the same binary as the 0.5.0 release asset, used by both
+  the Node and browser entry points. No kernel, hash or contract changes.
+
 ## `@mowaos/verify` 0.5.0 (2026-11-25)
 
 Published to npm from commit `afbf244` (signed tag `verify-v0.5.0`). Kernel, crates

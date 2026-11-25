@@ -37,7 +37,9 @@ a worked example that CI recomputes independently.
 | [`mowa-flow`](crates/mowa-flow) | Flow definitions, the guard language, and the validator |
 | [`mowa-core`](crates/mowa-core) | The pure `start` and `advance` reducers |
 | [`mowa-wasm`](crates/mowa-wasm) | WebAssembly boundary: JSON string in, JSON string out |
+| [`@mowaos/kernel`](packages/kernel) | The kernel as one npm package for Node and browsers; no Rust or `wasm-bindgen` needed |
 | [`@mowaos/host-browser`](packages/host-browser) | Browser host: IndexedDB storage, Web Locks, outbox with human confirmation |
+| [`@mowaos/verify`](packages/verify) | Offline verifier for exported decision histories: `npx @mowaos/verify bundle.json` |
 
 ## Quick start
 

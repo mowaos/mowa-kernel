@@ -3,6 +3,7 @@
 /pkg
 /pkg-web
 /packages/verify/wasm/
+/packages/kernel/wasm/
 node_modules/
 dist/
 

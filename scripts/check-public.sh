@@ -51,7 +51,8 @@ cargo_v=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n1)
 root_v=$(node -p 'require("./package.json").version')
 host_v=$(node -p 'require("./packages/host-browser/package.json").version')
 verify_v=$(node -p 'require("./packages/verify/package.json").version')
-[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] && [ "$cargo_v" = "$verify_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v, verify $verify_v"
+kernel_v=$(node -p 'require("./packages/kernel/package.json").version')
+[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] && [ "$cargo_v" = "$verify_v" ] && [ "$cargo_v" = "$kernel_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v, verify $verify_v, kernel $kernel_v"
 bad_pins=$(grep -E '^mowa-[a-z]+ = \{ path = ' Cargo.toml | grep -v "version = \"=$cargo_v\"" || true)
 [ -z "$bad_pins" ] || err "workspace crate pins do not match $cargo_v: $bad_pins"
 if [ -n "${1:-}" ] && [ "$1" != "v$cargo_v" ]; then err "tag $1 does not match version v$cargo_v"; fi

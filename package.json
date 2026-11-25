@@ -17,7 +17,9 @@
     "build:host": "npm --prefix packages/host-browser run build",
     "test:verify": "npm --prefix packages/verify test",
     "build:verify": "npm --prefix packages/verify run build",
-    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify"
+    "test:kernel": "npm --prefix packages/kernel test",
+    "build:kernel": "npm --prefix packages/kernel run build",
+    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel"
   },
   "repository": {
     "type": "git",
