@@ -24,6 +24,11 @@ the JSON contract or a hash formula, and the entry will say so.
   Node 22.13 or later. Tested over real stdio, with a person acting from a second
   process and the exported bundle checked by `@mowaos/verify`, and checked against the
   official MCP Inspector.
+- **Example `examples/ai-agent-time-travel`** (`npm run demo:agent`, about 15 s): a
+  scripted agent works through `@mowaos/mcp`, is blocked by a host fact and refused
+  twice, a person clears and approves, and the exported record verifies. Then, from the
+  bundle alone, it replays a step to the same decision, branches with a different fact,
+  and shows that rewriting history fails verification. CI runs it on every change.
 - The public gate now also checks `@mowaos/mcp`'s version and that npm packages pin
   `@mowaos/*` dependencies to the release version exactly.
 - **`@mowaos/verify` runs in browsers.** The same `verifyBundle` API works in Vite,

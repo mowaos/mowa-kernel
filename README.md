@@ -38,6 +38,10 @@ bundle and check it with `npx @mowaos/verify`. Every run is a link: send it, and
 the other person's browser replays it to the same hashes. To run it locally, build the packages
 (`npm test` does), then `npm run playground`.
 
+For AI agents, `npm run demo:agent` runs [an agent through `@mowaos/mcp`](examples/ai-agent-time-travel):
+blocked by a host fact, refused when it tries to approve itself, approved by a person,
+then verified, replayed and branched from its record.
+
 ## Packages
 
 | Package | What it is |

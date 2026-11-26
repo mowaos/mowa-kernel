@@ -26,7 +26,9 @@
     "build:mcp": "npm --prefix packages/mcp run build",
     "test:playground": "node --test playground/tests/presets.test.mjs playground/tests/link.test.mjs",
     "playground": "node scripts/playground.mjs",
-    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel && npm run test:mcp && npm run test:playground"
+    "demo:agent": "node examples/ai-agent-time-travel/demo.mjs --slow",
+    "test:examples": "node examples/ai-agent-time-travel/demo.mjs > /dev/null",
+    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel && npm run test:mcp && npm run test:playground && npm run test:examples"
   },
   "repository": {
     "type": "git",
