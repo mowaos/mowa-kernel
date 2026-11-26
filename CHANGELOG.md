@@ -12,6 +12,14 @@ the JSON contract or a hash formula, and the entry will say so.
   `node:crypto`. Elsewhere it uses a built-in SHA-256, tested against `node:crypto`,
   chosen through the package's `imports` map. No Node APIs remain in the shared code.
   The CLI and the Node API are unchanged.
+- **Playground** (`playground/`, deployed to GitHub Pages): three example flows on the
+  real kernel, host and verifier, in the browser. It has a state graph, time travel
+  (rewinding replays the kept steps to identical hashes), a per-step table of WASM
+  against pure-JS hashes, a live PASS badge over the whole history, a tamper button,
+  the outbox with `AWAIT_CONFIRMATION`, and bundle download. It needs no bundler and
+  no dependencies: an import map loads the packages' built `dist` folders.
+  `npm run playground` serves it locally. CI runs every preset in Node and drives the
+  page in headless Chrome.
 
 ## 0.5.1 (2026-11-25)
 

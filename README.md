@@ -28,6 +28,15 @@ SHA-256 hashes. An auditor can take a stored decision, rerun it, and get the sam
 The exact hash formulas are in the [hashing specification](docs/hashing-spec.md), with
 a worked example that CI recomputes independently.
 
+## Try it in your browser
+
+The [playground](https://mowaos.github.io/mowa-kernel/) runs three example flows on the
+real kernel, entirely in the page: a coffee machine, a two-phase approval and an AI
+tool-calling guardrail. Act as different actors, step back through every decision,
+tamper with a step and watch both verification engines catch it, then download the
+bundle and check it with `npx @mowaos/verify`. To run it locally, build the packages
+(`npm test` does), then `npm run playground`.
+
 ## Packages
 
 | Package | What it is |

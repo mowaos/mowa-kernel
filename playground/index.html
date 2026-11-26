@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MO·WA OS Playground</title>
+<meta name="description" content="Run a workflow on the MO·WA OS kernel in your browser, travel back through its decisions, and check every hash with two independent engines.">
+<link rel="stylesheet" href="style.css">
+<!-- The packages' built dist folders, as published to npm. "#sha256" is @mowaos/verify's
+     internal import; its browser target is the built-in SHA-256. -->
+<script type="importmap">
+{
+  "imports": {
+    "@mowaos/kernel": "./lib/kernel/dist/browser.js",
+    "@mowaos/host-browser": "./lib/host-browser/dist/index.js",
+    "@mowaos/verify": "./lib/verify/dist/browser.js",
+    "#sha256": "./lib/verify/dist/sha256.js"
+  }
+}
+</script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="bar">
+  <div class="brand">
+    <strong>MO·WA OS</strong> <span class="muted">Playground</span>
+  </div>
+  <label class="preset">
+    <span class="sr">Preset</span>
+    <select id="preset"></select>
+  </label>
+  <div id="badge" class="badge" role="status" aria-live="polite">Loading…</div>
+</header>
+
+<main>
+  <p id="blurb" class="blurb"></p>
+
+  <div class="grid">
+    <section class="panel graph-panel" aria-labelledby="h-graph">
+      <h2 id="h-graph">State</h2>
+      <div class="graph-wrap"><svg id="graph" role="img" aria-label="Flow graph"></svg></div>
+      <p class="legend muted">
+        <span class="key key-now"></span> current state
+        <span class="key key-fail"></span> route when a guard fails
+      </p>
+    </section>
+
+    <section class="panel act-panel" aria-labelledby="h-act">
+      <h2 id="h-act">Act</h2>
+      <label class="field">Act as
+        <select id="actor"></select>
+      </label>
+      <fieldset class="field">
+        <legend>Facts the host supplies</legend>
+        <div id="facts" class="facts"></div>
+      </fieldset>
+      <div id="events" class="events"></div>
+      <p id="last" class="muted small" aria-live="polite"></p>
+      <ul id="refusals" class="refusals"></ul>
+    </section>
+
+    <section class="panel time-panel" aria-labelledby="h-time">
+      <h2 id="h-time">Time travel</h2>
+      <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Step">
+      <p id="step-label" class="step-label"></p>
+      <div class="row">
+        <button id="rewind" type="button">Rewind to this step</button>
+        <button id="tamper" type="button" class="ghost">Tamper with this step</button>
+      </div>
+      <p class="muted small">Rewinding replays the kept steps on a fresh host. The hashes come out identical, because the kernel reads no clock, randomness or floats.</p>
+    </section>
+
+    <section class="panel audit-panel" aria-labelledby="h-audit">
+      <h2 id="h-audit">Hash audit</h2>
+      <div class="table-wrap">
+        <table id="hashes">
+          <thead><tr><th>Field</th><th>WASM kernel</th><th>JS spec hasher</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <ul id="errors" class="errors"></ul>
+    </section>
+
+    <section class="panel outbox-panel" aria-labelledby="h-outbox">
+      <h2 id="h-outbox">Outbox</h2>
+      <p class="muted small">Effects the kernel emitted. The host carries them out; some wait for a person.</p>
+      <ul id="outbox" class="outbox"></ul>
+    </section>
+
+    <section class="panel export-panel" aria-labelledby="h-export">
+      <h2 id="h-export">Verify it yourself</h2>
+      <button id="export" type="button">Download bundle.json</button>
+      <pre class="cmd"><code>npx @mowaos/verify bundle.json</code></pre>
+      <p class="muted small">The bundle holds every step's inputs and outputs. The verifier replays them on its own copy of the kernel and recomputes each hash from the <a href="https://github.com/mowaos/mowa-kernel/blob/main/docs/hashing-spec.md">hashing specification</a>.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot muted small">
+  <span id="version"></span> · Runs entirely in your browser ·
+  <a href="https://github.com/mowaos/mowa-kernel">Source</a>
+</footer>
+</body>
+</html>

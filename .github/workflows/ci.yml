@@ -79,6 +79,8 @@ jobs:
           cargo +stable install wasm-bindgen-cli --version "$v" --locked
       - run: npm install --global typescript@5.7.3
       - run: npm test
+      - name: Playground in headless Chrome
+        run: node scripts/playground.mjs --test
 
   reproducible:
     name: Reproducible WASM build

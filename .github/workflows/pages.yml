@@ -1,0 +1,58 @@
+name: Pages
+
+# Builds the playground from this commit's kernel and packages, tests it in headless
+# Chrome, and deploys it to GitHub Pages. Needs Settings → Pages → Source: GitHub Actions.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install wasm-bindgen CLI (version pinned in Cargo.lock)
+        run: |
+          v=$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p' | head -n1)
+          rustup toolchain install stable --profile minimal
+          cargo +stable install wasm-bindgen-cli --version "$v" --locked
+      - run: npm install --global typescript@5.7.3
+      - name: Build the kernel and packages
+        run: |
+          bash js-smoke/run.sh
+          npm run build:kernel
+          npm run build:host
+          npm run build:verify
+      - run: npm run test:playground
+      - name: Build, then test the page in headless Chrome
+        run: node scripts/playground.mjs --test
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/playground/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
