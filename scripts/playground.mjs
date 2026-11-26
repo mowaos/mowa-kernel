@@ -9,7 +9,8 @@
 // Build the packages first: bash js-smoke/run.sh, then npm run build:kernel,
 // build:host and build:verify (npm test does all of this).
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -109,9 +110,10 @@ if (!args.has("--test")) {
     console.error("No Chrome found. Set CHROME=/path/to/chrome.");
     process.exit(1);
   }
-  // Reuse one profile under target/: headless Chrome leaves helpers that block removal.
-  const profile = join(repo, "target", "playground", "chrome-profile");
-  mkdirSync(profile, { recursive: true });
+  // A fresh profile every run. One kept under target/ was restored by CI's build cache
+  // from another machine, with that machine's "profile in use" lock, and Chrome refused
+  // to start. Removal is best effort: headless Chrome can leave helpers behind.
+  const profile = mkdtempSync(join(tmpdir(), "mowa-playground-chrome-"));
   let chromeErr = "";
   let chrome;
   const launch = () => {
@@ -145,6 +147,12 @@ if (!args.has("--test")) {
     await exited;
   }
   server.close();
+  try {
+    await new Promise((r) => setTimeout(r, 500));
+    rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  } catch {
+    // Left in the temp folder; harmless.
+  }
   for (const line of out.log ?? []) console.log(`ok  ${line}`);
   if (!out.ok) {
     console.error(`Playground self-test failed: ${out.error}`);
