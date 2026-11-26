@@ -9,9 +9,6 @@ effects, supply the facts they depend on, or pick who it is. Every step is recor
 with SHA-256 hashes, and the record can be checked offline with
 `npx @mowaos/verify`.
 
-> Not on npm yet: it ships with the next release. Until then, build it from the
-> repository (`npm test` builds everything) and run `node packages/mcp/dist/cli.js`.
-
 ## Quick start
 
 1. **Write a flow:** the states, the moves, who may make each one, and which facts they

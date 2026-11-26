@@ -119,7 +119,7 @@
         "version": 0,
         "createdAt": 1000,
         "updatedAt": 1000,
-        "lastResultHash": "4c55275b511a86b33e08ecdcbaf2de4a385b6ed5246e46124220da50c7f2200e"
+        "lastResultHash": "fb8f75691e4a1c0995c9e608f3db688896cd888284dacc1d5e047398c0cd26de"
       },
       "expectedSessionVersion": null,
       "audit": {
@@ -136,7 +136,7 @@
         "workflowId": "example.approval",
         "workflowVersion": "1",
         "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
-        "kernelVersion": "0.5.1",
+        "kernelVersion": "0.5.2",
         "decisionHash": "967a5d3cd9272dd9c7a78d0d20ede68715f723fcbd820729b4e54d4caab2686f",
         "contextRefs": {},
         "factsHash": "69a5a5c3d4a916b9ca4a56f468daac9848ecb661cf2496a3d422ab79cac086da",
@@ -146,7 +146,7 @@
         },
         "timestamp": 1000,
         "prevResultHash": null,
-        "resultHash": "4c55275b511a86b33e08ecdcbaf2de4a385b6ed5246e46124220da50c7f2200e"
+        "resultHash": "fb8f75691e4a1c0995c9e608f3db688896cd888284dacc1d5e047398c0cd26de"
       },
       "dedupKey": "0e96202f4c3d7748456871eb0f62922124bd0345ebb81809707f01f2adec5cd3",
       "outbox": []
@@ -163,7 +163,7 @@
         "version": 1,
         "createdAt": 1000,
         "updatedAt": 2000,
-        "lastResultHash": "4794dc7ec6002f8d8459ef57eb2b4dccb5a3ce3c58c2a49369d2d2b92294fb27"
+        "lastResultHash": "9b620663e6f58b1384d91d65f5c9c6043bdc990d101d213f14d84ed808c9ac04"
       },
       "expectedSessionVersion": 0,
       "audit": {
@@ -180,7 +180,7 @@
         "workflowId": "example.approval",
         "workflowVersion": "1",
         "flowHash": "d411be2a3130518da01f14b7c9b1a44793ab5f5ec44b042cef87bb064290f373",
-        "kernelVersion": "0.5.1",
+        "kernelVersion": "0.5.2",
         "decisionHash": "4988cbc2ca1244ae55af0fa4a80eb2321c15f3739f96e741c80e9e1ee8735055",
         "contextRefs": {
           "screeningList": "2026-11-01"
@@ -191,8 +191,8 @@
           "id": "u-1"
         },
         "timestamp": 2000,
-        "prevResultHash": "4c55275b511a86b33e08ecdcbaf2de4a385b6ed5246e46124220da50c7f2200e",
-        "resultHash": "4794dc7ec6002f8d8459ef57eb2b4dccb5a3ce3c58c2a49369d2d2b92294fb27"
+        "prevResultHash": "fb8f75691e4a1c0995c9e608f3db688896cd888284dacc1d5e047398c0cd26de",
+        "resultHash": "9b620663e6f58b1384d91d65f5c9c6043bdc990d101d213f14d84ed808c9ac04"
       },
       "dedupKey": "f289372b7b72bd4a59aa7e85d5c96566e7b5b49c781c2a1122decbb8a4970452",
       "outbox": [

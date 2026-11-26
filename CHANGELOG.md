@@ -4,7 +4,12 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
-## Unreleased
+## 0.5.2 (2026-11-26)
+
+New packages and tools; decisions are unchanged. Every `flowHash`, `decisionHash`,
+`factsHash`, identifier and outbox entry is the same as in 0.5.1. As on every release,
+`kernelVersion` in audit records changes (to `0.5.2`), and with it each `resultHash`.
+Bundles recorded with 0.5.1 verify with `npx @mowaos/verify@0.5.1`.
 
 - **New package `@mowaos/mcp`:** an MCP server that puts the kernel in front of an AI
   agent, following the host contract's rules for agents (section 7). The agent gets

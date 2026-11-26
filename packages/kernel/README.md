@@ -10,7 +10,7 @@ npm install @mowaos/kernel
 import { loadKernel } from "@mowaos/kernel";
 
 const kernel = await loadKernel();
-kernel.kernelVersion(); // "0.5.1"
+kernel.kernelVersion(); // "0.5.2"
 ```
 
 `loadKernel()` returns the kernel's JSON boundary: `loadFlowJson`, `startJson`, `advanceJson`, `dedupKeyJson` and `kernelVersion`. Each call takes and returns a JSON string, as described in the [kernel specification](https://github.com/mowaos/mowa-kernel/blob/main/docs/kernel-spec.md) and [host contract](https://github.com/mowaos/mowa-kernel/blob/main/docs/host-contract.md). The first call loads the binary; later calls return the same instance.

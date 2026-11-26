@@ -204,8 +204,8 @@ Selected values from the `advance` commit:
 | `transitionId` | `tr_c5b6503a2a15d6660016a3fd6310fc52` |
 | `outbox[0].id` | `04b21541a7a888837f56a882c01cd45b` |
 | `dedupKey` | `f289372b7b72bd4a59aa7e85d5c96566e7b5b49c781c2a1122decbb8a4970452` |
-| `resultHash` (kernel 0.5.1) | `4794dc7ec6002f8d8459ef57eb2b4dccb5a3ce3c58c2a49369d2d2b92294fb27` |
-| `prevResultHash` (= start's `resultHash`) | `4c55275b511a86b33e08ecdcbaf2de4a385b6ed5246e46124220da50c7f2200e` |
+| `resultHash` (kernel 0.5.2) | `9b620663e6f58b1384d91d65f5c9c6043bdc990d101d213f14d84ed808c9ac04` |
+| `prevResultHash` (= start's `resultHash`) | `fb8f75691e4a1c0995c9e608f3db688896cd888284dacc1d5e047398c0cd26de` |
 
 ## 8. Reproducible builds
 

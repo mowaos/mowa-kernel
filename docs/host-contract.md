@@ -32,7 +32,7 @@ JSON response.
 | `startJson` | `{sessionId, event, flow, ctx}` | `{status: "OK", commit}` |
 | `advanceJson` | `{session, event, flow, facts?, ctx}` | `{status: "OK", commit}` |
 | `dedupKeyJson` | `{op: "START" \| "ADVANCE", sessionId, event}` | `{status: "OK", dedupKey, intentHash}` |
-| `kernelVersion` | (none) | The version as a plain string, e.g. `"0.5.1"` |
+| `kernelVersion` | (none) | The version as a plain string, e.g. `"0.5.2"` |
 
 Request and response objects follow kernel-spec.md (events, context, facts, sessions,
 commits) and reject unknown fields.
@@ -173,7 +173,7 @@ host SHOULD be able to export everything about a case as one JSON document:
 ```json
 {
   "format": "mowa.verification-bundle/1",
-  "kernelVersion": "0.5.1",
+  "kernelVersion": "0.5.2",
   "flows": { "<flowHash>": { "…": "flow definition" } },
   "sessions": [
     {

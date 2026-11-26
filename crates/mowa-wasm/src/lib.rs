@@ -7,7 +7,7 @@
 //!                 response = { status: "OK", flowHandle, flowHash } | { status: "FLOW_INVALID", errors }
 //!   dedupKeyJson  request = { op: "START" | "ADVANCE", sessionId, event }
 //!                 response = { status: "OK", dedupKey } | { status: "BAD_REQUEST", reason }
-//!   kernelVersion response = string (e.g. "0.5.1")
+//!   kernelVersion response = string (e.g. "0.5.2")
 //!
 //! In `startJson` and `advanceJson`, the `flow` field can be EITHER:
 //!   1. A full `FlowDefinition` JSON object, OR

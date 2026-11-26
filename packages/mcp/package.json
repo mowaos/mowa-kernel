@@ -1,6 +1,6 @@
 {
   "name": "@mowaos/mcp",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "description": "MCP server that puts the MO·WA OS kernel in front of an AI agent: the agent proposes, the flow decides, a person approves",
   "author": "Bruce Gardiner (ScrAtcH)",
@@ -24,8 +24,8 @@
     "NOTICE"
   ],
   "dependencies": {
-    "@mowaos/host-browser": "0.5.1",
-    "@mowaos/kernel": "0.5.1"
+    "@mowaos/host-browser": "0.5.2",
+    "@mowaos/kernel": "0.5.2"
   },
   "scripts": {
     "build": "tsc",

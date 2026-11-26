@@ -19,7 +19,7 @@ import { dirname, join, resolve } from "node:path";
 import { AGENT_ACTOR_TYPE, AgentHost } from "./agent-host.js";
 import { McpServer, serveStdio } from "./server.js";
 
-const VERSION = "0.5.1";
+const VERSION = "0.5.2";
 const USAGE = `mowa-mcp ${VERSION}: an MCP server that puts the MO·WA OS kernel in front of an AI agent.
 
 The agent (over MCP):
