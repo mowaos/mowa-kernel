@@ -26,6 +26,12 @@ the JSON contract or a hash formula, and the entry will say so.
   own browser; nothing is uploaded. Links are size-capped and validated against the
   preset before anything runs. Also: a copy-receipt button, link previews, `?preset=`
   deep links, and a line under the hash table explaining what a mismatch means.
+- **Playground guide for newcomers:** each preset walks through its path one step at a
+  time, saying what to try and then what just happened, with a "Do it for me" button.
+  It notices when you leave the path and offers a restart; at the end it points to
+  tamper, rewind and the replay link. Every panel has a one-sentence "?" explanation.
+  The guide text lives with each preset's demo steps, and the Chrome self-test walks
+  every preset through the guide, so the text cannot drift from the flows.
 
 ## 0.5.1 (2026-11-25)
 

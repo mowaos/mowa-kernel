@@ -18,6 +18,36 @@ function check(cond, msg) {
 export async function selftest() {
   const log = [];
   try {
+    // A newcomer's path: only the guide's "Do it for me" button, start to finish.
+    for (const preset of PRESETS) {
+      set($("preset"), preset.key);
+      await idle();
+      if (!document.querySelector('[data-guide="do"]')) {
+        $("guide").querySelector("button").click(); // "Show the guide" if it was hidden
+        await idle();
+      }
+      for (let n = 0; n < preset.demo.length; n++) {
+        const doIt = document.querySelector('[data-guide="do"]');
+        check(doIt, `${preset.key}: guide stopped at step ${n + 1}: ${$("guide").textContent}`);
+        doIt.click();
+        await idle();
+        check($("guide").textContent.includes(preset.demo[n].after), `${preset.key}: guide step ${n + 1} not explained`);
+      }
+      check($("guide").textContent.includes("That's the whole path"), `${preset.key}: no finale`);
+      check($("badge").textContent.startsWith("PASS"), `${preset.key}: guide run ${$("badge").textContent}`);
+    }
+    log.push("guide: every preset walked with Do it for me");
+
+    // Going off the path is detected.
+    set($("preset"), "coffee");
+    await idle();
+    set($("actor"), "TECHNICIAN");
+    await idle();
+    document.querySelector('#events [data-event="INSERT_COIN"]').click();
+    await idle();
+    check($("guide").textContent.includes("left the guided path"), "off-path not detected");
+    log.push("guide: off-path detected");
+
     for (const preset of PRESETS) {
       set($("preset"), preset.key);
       await idle();
@@ -91,6 +121,7 @@ export async function selftest() {
     check($("scrub").max === steps, `link replayed ${$("scrub").max} steps, not ${steps}`);
     check($("final-hash").textContent === final, "link replayed to a different final resultHash");
     check($("badge").textContent.startsWith("PASS"), `link replay: ${$("badge").textContent}`);
+    check($("guide").textContent.includes("shared run"), "shared run not announced");
     log.push(`replay link (${link.length} chars): same steps, same final resultHash`);
 
     await navigate("#r=not-a-real-link");

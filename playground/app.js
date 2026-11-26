@@ -7,7 +7,7 @@ import * as verify from "@mowaos/verify";
 
 import { createEngine } from "./engine.js";
 import { decodeLink, encodeLink } from "./link.js";
-import { PRESETS } from "./presets.js";
+import { FINALE, PRESETS } from "./presets.js";
 
 const $ = (id) => document.getElementById(id);
 const SVG = "http://www.w3.org/2000/svg";
@@ -42,8 +42,23 @@ function run(fn) {
   return busy;
 }
 
+async function act(event, actor) {
+  follow = true;
+  const facts = { ...engine.facts };
+  const r = await engine.fire(event, actor);
+  $("last").style.color = "";
+  $("last").textContent = r.ok
+    ? `Committed in ${engine.lastMs.toFixed(2)} ms (kernel decision and host storage).`
+    : `Refused: ${r.code}. Nothing was committed.`;
+  guideAfterFire(event, actor, facts, r);
+}
+
 async function loadPreset(key) {
   const preset = PRESETS.find((p) => p.key === key);
+  guide.i = 0;
+  guide.off = false;
+  guide.shared = false;
+  guide.after = "";
   engine = await createEngine({ host, verify, kernel, preset });
   $("preset").value = key;
   sel = 0;
@@ -154,6 +169,11 @@ function drawGraph(flow, state, audit) {
     ...parts,
     ...nodes
   );
+  // On narrow screens the graph scrolls; keep the current state in view.
+  const wrap = svg.parentElement;
+  if (pos[state] && wrap.scrollWidth > wrap.clientWidth) {
+    wrap.scrollLeft = pos[state].x + W / 2 - wrap.clientWidth / 2;
+  }
 }
 
 // ---- render ------------------------------------------------------------------------
@@ -194,16 +214,7 @@ async function render() {
         class: t.allowedActors.includes(actor) ? false : "not-allowed",
         disabled: !atEnd,
         title: atEnd ? false : "Rewind to this step to act from here",
-        onclick: () => {
-          follow = true;
-          return run(async () => {
-            const r = await engine.fire(t.event, $("actor").value);
-            $("last").style.color = "";
-            $("last").textContent = r.ok
-              ? `Committed in ${engine.lastMs.toFixed(2)} ms (kernel decision and host storage).`
-              : `Refused: ${r.code}. Nothing was committed.`;
-          });
-        },
+        onclick: () => run(() => act(t.event, $("actor").value)),
       }, t.event, h("span", { class: "hint" }, `→ ${t.to} · ${t.allowedActors.join(", ")}`))
     )
   );
@@ -256,6 +267,7 @@ async function render() {
           : []))
     )
   );
+  renderGuide();
   await syncUrl();
 }
 
@@ -299,8 +311,8 @@ async function openFromLocation() {
         sel = link.at;
         follow = false;
       }
-      $("last").style.color = "";
-      $("last").textContent = `Replayed a shared run: ${engine.attempts.length} events, ${engine.stepCount} steps, computed here in your browser.`;
+      $("last").textContent = "";
+      guide.shared = true;
       return;
     } catch (err) {
       $("last").style.color = "var(--bad)";
@@ -336,7 +348,113 @@ function receipt() {
   ].join("\n");
 }
 
+// ---- guide -------------------------------------------------------------------------
+// Walks a newcomer through the preset's demo path, one step at a time. It follows what
+// they actually do: any step that differs from the path (event, actor, facts or outcome)
+// leaves the guide, which then offers a restart.
+
+const GUIDE_OFF_KEY = "mowa-playground-guide-off";
+const guide = { on: true, i: 0, off: false, shared: false, after: "" };
+try {
+  guide.on = localStorage.getItem(GUIDE_OFF_KEY) !== "1";
+} catch {
+  // Storage can be unavailable (private windows, blocked site data); keep the default.
+}
+
+function rememberGuide(on) {
+  guide.on = on;
+  try {
+    if (on) localStorage.removeItem(GUIDE_OFF_KEY);
+    else localStorage.setItem(GUIDE_OFF_KEY, "1");
+  } catch {
+    // Not remembered; the choice still holds for this visit.
+  }
+}
+
+// Facts the path expects when step i fires: the preset's initial facts plus every
+// change made by steps up to and including i.
+function pathFacts(i) {
+  const facts = { ...engine.preset.initialFacts };
+  for (const s of engine.preset.demo.slice(0, i + 1)) Object.assign(facts, s.facts ?? {});
+  return facts;
+}
+
+function guideAfterFire(event, actor, facts, r) {
+  const step = engine.preset.demo[guide.i];
+  if (guide.shared || guide.off || !step) return;
+  const want = pathFacts(guide.i);
+  const sameFacts = Object.keys(want).every((k) => want[k] === facts[k]);
+  const sameOutcome = step.refused ? !r.ok && r.code === step.refused : r.ok;
+  if (step.event === event && step.actor === actor && sameFacts && sameOutcome) {
+    guide.after = step.after;
+    guide.i += 1;
+  } else {
+    guide.off = true;
+  }
+}
+
+async function doGuideStep() {
+  const step = engine.preset.demo[guide.i];
+  Object.assign(engine.facts, step.facts ?? {});
+  $("actor").value = step.actor;
+  await act(step.event, step.actor);
+}
+
+function restartGuide() {
+  rememberGuide(true);
+  return loadPreset(engine.preset.key);
+}
+
+function renderGuide() {
+  const box = $("guide");
+  const demo = engine.preset.demo;
+  const button = (label, onclick, ghost) =>
+    h("button", { type: "button", class: ghost ? "ghost" : false, onclick: () => run(onclick) }, label);
+  let content = [];
+  if (guide.shared) {
+    content = [
+      h("p", {}, `You're viewing a shared run: ${engine.stepCount} steps, replayed here in your browser. The hashes were computed on your machine, not copied from the link.`),
+      h("div", { class: "row" }, button("Start this preset from scratch with the guide", restartGuide, true)),
+    ];
+  } else if (!guide.on) {
+    content = [h("div", { class: "row" }, button("Show the guide (restarts this preset)", restartGuide, true))];
+  } else if (guide.off) {
+    content = [
+      h("p", {}, "You've left the guided path. Explore freely: you can't break anything."),
+      h("div", { class: "row" },
+        button("Restart the guide", restartGuide),
+        button("Hide the guide", () => rememberGuide(false), true)),
+    ];
+  } else if (guide.i < demo.length) {
+    const step = demo[guide.i];
+    content = [
+      guide.after ? h("p", { class: "after" }, guide.after) : null,
+      h("p", { class: "next" }, h("span", { class: "count" }, `Step ${guide.i + 1} of ${demo.length}: `), step.say),
+      h("div", { class: "row" },
+        h("button", { type: "button", "data-guide": "do", onclick: () => run(doGuideStep) }, "Do it for me"),
+        button("Skip the guide", () => rememberGuide(false), true)),
+    ];
+  } else {
+    content = [
+      h("p", { class: "after" }, guide.after),
+      h("p", { class: "next" }, FINALE),
+      h("div", { class: "row" },
+        button("Restart the guide", restartGuide, true),
+        button("Hide the guide", () => rememberGuide(false), true)),
+    ];
+  }
+  box.replaceChildren(...content.filter(Boolean));
+}
+
 // ---- wiring ------------------------------------------------------------------------
+
+for (const btn of document.querySelectorAll(".help-btn")) {
+  btn.addEventListener("click", () => {
+    const panel = $(btn.getAttribute("aria-controls"));
+    panel.hidden = !panel.hidden;
+    btn.setAttribute("aria-expanded", String(!panel.hidden));
+  });
+}
 
 $("preset").replaceChildren(...PRESETS.map((p) => h("option", { value: p.key }, p.title)));
 $("preset").addEventListener("change", (e) => run(() => loadPreset(e.target.value)));
@@ -354,6 +472,7 @@ $("rewind").addEventListener("click", () =>
   run(async () => {
     await engine.rewind(sel);
     follow = true;
+    guide.off = true;
     $("last").style.color = "";
     $("last").textContent = `Rewound to step ${sel}. Replayed on a fresh host with identical hashes.`;
   })

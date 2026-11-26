@@ -45,6 +45,13 @@ describe("playground presets", () => {
         assert.equal(res.status, "OK", JSON.stringify(res));
       });
 
+      it("has guide text for every demo step", () => {
+        for (const step of preset.demo) {
+          assert.ok(step.say?.length > 10, `${step.event}: say`);
+          assert.ok(step.after?.length > 10, `${step.event}: after`);
+        }
+      });
+
       it("declares every actor and fact it uses", () => {
         const used = new Set([
           ...preset.flow.startActors,

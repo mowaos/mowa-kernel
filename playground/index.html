@@ -45,7 +45,8 @@
 
   <div class="grid">
     <section class="panel graph-panel" aria-labelledby="h-graph">
-      <h2 id="h-graph">State</h2>
+      <h2 id="h-graph">State <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-graph" aria-label="What is State?">?</button></h2>
+      <p id="help-graph" class="help small" hidden>The workflow as a map. The highlighted box is where the session is now. Each arrow is an event that can move it; dashed arrows are where it goes when a check fails.</p>
       <div class="graph-wrap"><svg id="graph" role="img" aria-label="Flow graph"></svg></div>
       <p class="legend muted">
         <span class="key key-now"></span> current state
@@ -54,7 +55,9 @@
     </section>
 
     <section class="panel act-panel" aria-labelledby="h-act">
-      <h2 id="h-act">Act</h2>
+      <h2 id="h-act">Act <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-act" aria-label="What is Act?">?</button></h2>
+      <p id="help-act" class="help small" hidden>Choose who you are and press an event. The kernel decides: it either records a step or refuses the event. Facts are what the host knows, for example whether a check passed.</p>
+      <div id="guide" class="guide" aria-live="polite"></div>
       <label class="field">Act as
         <select id="actor"></select>
       </label>
@@ -68,7 +71,8 @@
     </section>
 
     <section class="panel time-panel" aria-labelledby="h-time">
-      <h2 id="h-time">Time travel</h2>
+      <h2 id="h-time">Time travel <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-time" aria-label="What is Time travel?">?</button></h2>
+      <p id="help-time" class="help small" hidden>Every step is kept. Drag the slider to look at any earlier step, rewind to branch from it, or tamper with it to see verification fail.</p>
       <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Step">
       <p id="step-label" class="step-label"></p>
       <div class="row">
@@ -79,7 +83,8 @@
     </section>
 
     <section class="panel audit-panel" aria-labelledby="h-audit">
-      <h2 id="h-audit">Hash audit</h2>
+      <h2 id="h-audit">Hash audit <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-audit" aria-label="What is Hash audit?">?</button></h2>
+      <p id="help-audit" class="help small" hidden>Fingerprints (SHA-256 hashes) of the selected step, computed twice: by the kernel in WebAssembly, and by a separate JavaScript implementation of the published specification. They must match.</p>
       <div class="table-wrap">
         <table id="hashes">
           <thead><tr><th>Field</th><th>WASM kernel</th><th>JS spec hasher</th><th></th></tr></thead>
@@ -91,13 +96,15 @@
     </section>
 
     <section class="panel outbox-panel" aria-labelledby="h-outbox">
-      <h2 id="h-outbox">Outbox</h2>
+      <h2 id="h-outbox">Outbox <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-outbox" aria-label="What is Outbox?">?</button></h2>
+      <p id="help-outbox" class="help small" hidden>What the kernel asks the outside world to do, such as send a notification or run an action. The kernel only records these; the host carries them out, some only after a person confirms.</p>
       <p class="muted small">Effects the kernel emitted. The host carries them out; some wait for a person.</p>
       <ul id="outbox" class="outbox"></ul>
     </section>
 
     <section class="panel export-panel" aria-labelledby="h-export">
-      <h2 id="h-export">Share and verify</h2>
+      <h2 id="h-export">Share and verify <button type="button" class="help-btn" aria-expanded="false" aria-controls="help-export" aria-label="What is Share and verify?">?</button></h2>
+      <p id="help-export" class="help small" hidden>The replay link rebuilds this run in anyone's browser. The bundle is the full record, which anyone can check offline with the verifier.</p>
       <p class="small final">Final resultHash <code id="final-hash"></code></p>
       <div class="row">
         <button id="copy-link" type="button">Copy replay link</button>

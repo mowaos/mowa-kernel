@@ -60,12 +60,36 @@ const coffee = {
   payloads: {},
   confirm: [],
   demo: [
-    { event: "INSERT_COIN", actor: "CUSTOMER" },
-    { event: "BREW", actor: "CUSTOMER", expect: "needs_service" },
-    { event: "REFILLED", actor: "CUSTOMER", refused: "UNAUTHORIZED" },
-    { event: "REFILLED", actor: "TECHNICIAN", facts: { "machine:water": "OK" } },
-    { event: "BREW", actor: "CUSTOMER", expect: "brewing" },
-    { event: "CUP_TAKEN", actor: "SYSTEM", expect: "idle" },
+    {
+      event: "INSERT_COIN", actor: "CUSTOMER",
+      say: "Insert a coin as the CUSTOMER.",
+      after: "The kernel moved the machine from idle to paid and recorded it as step 1. Its hashes are in the Hash audit panel.",
+    },
+    {
+      event: "BREW", actor: "CUSTOMER", expect: "needs_service",
+      say: "Press BREW. The water is EMPTY (see the facts), so watch where the machine goes.",
+      after: "Brewing needs water and beans to be OK. The check failed, so instead of refusing, the kernel sent the machine to needs_service and emitted an alert_technician effect (see the Outbox).",
+    },
+    {
+      event: "REFILLED", actor: "CUSTOMER", refused: "UNAUTHORIZED",
+      say: "Try refilling the machine yourself, as the CUSTOMER.",
+      after: "Refused: only a TECHNICIAN may refill. The kernel rejected the event, and nothing was recorded.",
+    },
+    {
+      event: "REFILLED", actor: "TECHNICIAN", facts: { "machine:water": "OK" },
+      say: "Act as the TECHNICIAN, set the water to OK, and refill.",
+      after: "Back to paid, and the water is now OK.",
+    },
+    {
+      event: "BREW", actor: "CUSTOMER", expect: "brewing",
+      say: "Brew again, as the CUSTOMER.",
+      after: "Water and beans are both OK, so the check passes: the machine brews, and a dispense effect appears in the Outbox.",
+    },
+    {
+      event: "CUP_TAKEN", actor: "SYSTEM", expect: "idle",
+      say: "The machine's own sensor (SYSTEM) reports that the cup was taken.",
+      after: "Back to idle. Every step is hashed and chained to the one before it.",
+    },
   ],
 };
 
@@ -125,10 +149,26 @@ const approval = {
   payloads: {},
   confirm: ["run_action"],
   demo: [
-    { event: "SUBMIT", actor: "REQUESTER" },
-    { event: "APPROVE", actor: "REQUESTER", refused: "UNAUTHORIZED" },
-    { event: "APPROVE", actor: "APPROVER", expect: "escalated" },
-    { event: "OVERRIDE", actor: "ADMIN", expect: "approved", awaits: "run_action" },
+    {
+      event: "SUBMIT", actor: "REQUESTER",
+      say: "Submit the request as the REQUESTER.",
+      after: "The request now waits for approval, and a notify effect tells the approver (see the Outbox).",
+    },
+    {
+      event: "APPROVE", actor: "REQUESTER", refused: "UNAUTHORIZED",
+      say: "Try approving your own request, still as the REQUESTER.",
+      after: "Refused: only an APPROVER may approve. Nothing was recorded.",
+    },
+    {
+      event: "APPROVE", actor: "APPROVER", expect: "escalated",
+      say: "Approve as the APPROVER. The request is over the limit (check:limit is EXCEEDED).",
+      after: "Over the limit, so the check failed, and the request went up to an admin instead of being approved.",
+    },
+    {
+      event: "OVERRIDE", actor: "ADMIN", expect: "approved", awaits: "run_action",
+      say: "Override as the ADMIN.",
+      after: "Approved. That was phase one. In phase two, the run_action effect waits in the Outbox as AWAIT_CONFIRMATION: press Confirm there to let it run.",
+    },
   ],
 };
 
@@ -188,12 +228,36 @@ const guardrail = {
   },
   confirm: [],
   demo: [
-    { event: "PROPOSE_TOOL_CALL", actor: "AI", expect: "blocked" },
-    { event: "DISMISS", actor: "HUMAN", facts: { "policy:budget": "PASS" } },
-    { event: "PROPOSE_TOOL_CALL", actor: "AI", expect: "proposed" },
-    { event: "APPROVE_CALL", actor: "AI", refused: "UNAUTHORIZED" },
-    { event: "APPROVE_CALL", actor: "HUMAN", expect: "executed" },
+    {
+      event: "PROPOSE_TOOL_CALL", actor: "AI", expect: "blocked",
+      say: "As the AI, propose a tool call. The host's budget check says FAIL.",
+      after: "A policy check failed, so the proposal went to blocked for a person to look at. The AI cannot talk its way past a fact the host supplies.",
+    },
+    {
+      event: "DISMISS", actor: "HUMAN", facts: { "policy:budget": "PASS" },
+      say: "As the HUMAN, set the budget to PASS and dismiss the flag.",
+      after: "Back to waiting, with every policy check now passing.",
+    },
+    {
+      event: "PROPOSE_TOOL_CALL", actor: "AI", expect: "proposed",
+      say: "Let the AI propose the tool call again.",
+      after: "The checks pass, so the call is proposed. Nothing has run yet.",
+    },
+    {
+      event: "APPROVE_CALL", actor: "AI", refused: "UNAUTHORIZED",
+      say: "Now try approving the call as the AI itself.",
+      after: "Refused: only a HUMAN may approve. That is the guardrail: an agent can propose, never approve.",
+    },
+    {
+      event: "APPROVE_CALL", actor: "HUMAN", expect: "executed",
+      say: "Approve the call as the HUMAN.",
+      after: "Executed. The call_tool effect is emitted only now, after a person approved.",
+    },
   ],
 };
 
 export const PRESETS = [coffee, approval, guardrail];
+
+// Shown when a preset's guided path is complete.
+export const FINALE =
+  "That's the whole path. Now try three things: drag the Time travel slider back and press Tamper, and watch both engines catch it. Press Rewind to branch from any step. Copy the replay link to send this exact run to someone.";

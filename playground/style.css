@@ -13,6 +13,8 @@
   --bad-bg: #fde8e6;
   --warn: #a15c00;
   --node: #ffffff;
+  --guide-bg: #eef3ff;
+  --guide-line: #c9d7fb;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 @media (prefers-color-scheme: dark) {
@@ -31,6 +33,8 @@
     --bad-bg: #3a1714;
     --warn: #f0b35a;
     --node: #20242b;
+    --guide-bg: #18213a;
+    --guide-line: #2c3c6b;
   }
 }
 
@@ -77,6 +81,8 @@ main { max-width: 1200px; margin: 0 auto; padding: 16px; }
 .export-panel { grid-column: span 5; }
 @media (max-width: 900px) {
   .grid > .panel { grid-column: 1 / -1; }
+  /* The guide and the controls come first on a phone; the graph follows. */
+  .act-panel { order: -1; }
 }
 
 .graph-wrap { overflow-x: auto; }
@@ -135,6 +141,23 @@ th { color: var(--muted); font-weight: 600; }
 td.ok { color: var(--ok); font-weight: 700; }
 td.bad { color: var(--bad); font-weight: 700; }
 tr.mismatch td { background: var(--bad-bg); }
+
+.help-btn {
+  margin-left: 4px; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  font: 600 11px/1 system-ui, sans-serif; vertical-align: 1px;
+  background: transparent; color: var(--muted); border: 1px solid var(--line);
+}
+.help-btn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+.help { margin: -4px 0 10px; color: var(--muted); max-width: 70ch; }
+
+.guide:empty { display: none; }
+.guide { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: var(--guide-bg); border: 1px solid var(--guide-line); }
+.guide p { margin: 0 0 8px; }
+.guide .after { color: var(--ink); }
+.guide .next { font-weight: 600; }
+.guide .count { color: var(--muted); font-weight: 400; }
+.guide .row { margin: 0; }
+.guide button { padding: 5px 10px; font-size: 13px; }
 
 .explain { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--bad); background: var(--bad-bg); border-radius: 4px; }
 .final { margin: 0 0 8px; overflow-wrap: anywhere; }
