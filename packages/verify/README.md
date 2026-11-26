@@ -50,6 +50,8 @@ if (!report.ok) {
 
 ### In the browser
 
+Browser support is on `main` and ships in the next npm release; 0.5.1 on npm runs in Node only.
+
 The same API works in browsers and bundlers (Vite, webpack). Pass the kernel from [`@mowaos/kernel`](https://www.npmjs.com/package/@mowaos/kernel); the hash check uses a built-in SHA-256, so no Node APIs are needed:
 
 ```ts
