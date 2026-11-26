@@ -79,10 +79,37 @@ export async function selftest() {
     check(!document.querySelector("#outbox [data-confirm]"), "approval: still awaiting confirmation");
     log.push("approval: AWAIT_CONFIRMATION confirmed");
 
+    // The address bar is a replay link: open another preset, then come back through it.
+    const link = location.hash;
+    const final = $("final-hash").textContent;
+    const steps = $("scrub").max;
+    check(link.startsWith("#r="), `address is not a replay link: ${link}`);
+    await navigate("#guardrail");
+    check($("preset").value === "guardrail", "#guardrail did not open the preset");
+    await navigate(link);
+    check($("preset").value === "approval", "link did not reopen its preset");
+    check($("scrub").max === steps, `link replayed ${$("scrub").max} steps, not ${steps}`);
+    check($("final-hash").textContent === final, "link replayed to a different final resultHash");
+    check($("badge").textContent.startsWith("PASS"), `link replay: ${$("badge").textContent}`);
+    log.push(`replay link (${link.length} chars): same steps, same final resultHash`);
+
+    await navigate("#r=not-a-real-link");
+    check($("last").textContent.includes("could not be read"), "bad link not reported");
+    check($("badge").textContent.startsWith("PASS"), "bad link left the page broken");
+    log.push("bad replay link rejected cleanly");
+
     await post({ ok: true, log, kernel: $("version").textContent });
   } catch (err) {
     await post({ ok: false, log, error: err.message });
   }
+}
+
+// Changing the hash fires hashchange, which queues the page's work; wait for both.
+async function navigate(hash) {
+  const changed = new Promise((r) => window.addEventListener("hashchange", r, { once: true }));
+  location.hash = hash;
+  await changed;
+  await idle();
 }
 
 function post(body) {

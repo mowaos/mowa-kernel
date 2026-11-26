@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MO·WA OS Playground</title>
 <meta name="description" content="Run a workflow on the MO·WA OS kernel in your browser, travel back through its decisions, and check every hash with two independent engines.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MO·WA OS Playground">
+<meta property="og:description" content="An AI agent proposes, the kernel decides, a person approves. Replay every decision in your browser and check every hash with two independent engines.">
+<meta property="og:url" content="https://mowaos.github.io/mowa-kernel/">
+<meta property="og:image" content="https://mowaos.github.io/mowa-kernel/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="style.css">
 <!-- The packages' built dist folders, as published to npm. "#sha256" is @mowaos/verify's
      internal import; its browser target is the built-in SHA-256. -->
@@ -78,6 +86,7 @@
           <tbody></tbody>
         </table>
       </div>
+      <p id="explain" class="explain small" hidden></p>
       <ul id="errors" class="errors"></ul>
     </section>
 
@@ -88,8 +97,15 @@
     </section>
 
     <section class="panel export-panel" aria-labelledby="h-export">
-      <h2 id="h-export">Verify it yourself</h2>
-      <button id="export" type="button">Download bundle.json</button>
+      <h2 id="h-export">Share and verify</h2>
+      <p class="small final">Final resultHash <code id="final-hash"></code></p>
+      <div class="row">
+        <button id="copy-link" type="button">Copy replay link</button>
+        <button id="copy-receipt" type="button" class="ghost">Copy receipt</button>
+        <button id="export" type="button" class="ghost">Download bundle.json</button>
+      </div>
+      <p id="share-note" class="muted small" aria-live="polite">A replay link rebuilds this exact run in anyone's browser, with the same hashes. Nothing is uploaded.</p>
+      <textarea id="share-fallback" class="share-fallback" rows="4" readonly hidden aria-label="Text to copy"></textarea>
       <pre class="cmd"><code>npx @mowaos/verify bundle.json</code></pre>
       <p class="muted small">The bundle holds every step's inputs and outputs. The verifier replays them on its own copy of the kernel and recomputes each hash from the <a href="https://github.com/mowaos/mowa-kernel/blob/main/docs/hashing-spec.md">hashing specification</a>.</p>
     </section>

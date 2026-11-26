@@ -136,5 +136,9 @@ td.ok { color: var(--ok); font-weight: 700; }
 td.bad { color: var(--bad); font-weight: 700; }
 tr.mismatch td { background: var(--bad-bg); }
 
+.explain { margin: 10px 0 0; padding: 8px 10px; border-left: 3px solid var(--bad); background: var(--bad-bg); border-radius: 4px; }
+.final { margin: 0 0 8px; overflow-wrap: anywhere; }
+.final code { font: 12px var(--mono); }
+.share-fallback { width: 100%; font: 12px var(--mono); margin-top: 8px; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px; }
 .cmd { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; overflow-x: auto; font: 12.5px var(--mono); }
 .foot { max-width: 1200px; margin: 0 auto; padding: 8px 16px 24px; }

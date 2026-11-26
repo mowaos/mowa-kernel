@@ -20,7 +20,7 @@ const args = new Set(process.argv.slice(2));
 
 // ---- build -------------------------------------------------------------------------
 
-const page = ["index.html", "style.css", "app.js", "engine.js", "presets.js", "selftest.js"];
+const page = ["index.html", "style.css", "app.js", "engine.js", "link.js", "presets.js", "selftest.js", "og.png"];
 const libs = {
   "lib/kernel/dist": "packages/kernel/dist",
   "lib/kernel/wasm": "packages/kernel/wasm",

@@ -20,6 +20,12 @@ the JSON contract or a hash formula, and the entry will say so.
   no dependencies: an import map loads the packages' built `dist` folders.
   `npm run playground` serves it locally. CI runs every preset in Node and drives the
   page in headless Chrome.
+- **Playground replay links:** the address bar always holds the current run
+  (`#r=…`, about 130 characters), refused attempts and any tampering included. Anyone
+  who opens it gets the same session and the same final `resultHash`, computed in their
+  own browser; nothing is uploaded. Links are size-capped and validated against the
+  preset before anything runs. Also: a copy-receipt button, link previews, `?preset=`
+  deep links, and a line under the hash table explaining what a mismatch means.
 
 ## 0.5.1 (2026-11-25)
 

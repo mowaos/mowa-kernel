@@ -6,6 +6,7 @@ import * as host from "@mowaos/host-browser";
 import * as verify from "@mowaos/verify";
 
 import { createEngine } from "./engine.js";
+import { decodeLink, encodeLink } from "./link.js";
 import { PRESETS } from "./presets.js";
 
 const $ = (id) => document.getElementById(id);
@@ -27,6 +28,8 @@ const kernel = await loadKernel();
 let engine;
 let sel = 0; // selected step
 let follow = true; // keep the newest step selected
+let shareUrl = location.href;
+let lastReport = null;
 
 // Every action runs in order, one at a time; window.__busy lets the self-test wait.
 let busy = Promise.resolve();
@@ -42,6 +45,7 @@ function run(fn) {
 async function loadPreset(key) {
   const preset = PRESETS.find((p) => p.key === key);
   engine = await createEngine({ host, verify, kernel, preset });
+  $("preset").value = key;
   sel = 0;
   follow = true;
   $("blurb").textContent = preset.blurb;
@@ -227,6 +231,11 @@ async function render() {
   $("errors").replaceChildren(
     ...report.errors.slice(0, 6).map((e) => h("li", {}, `step ${e.stepIndex ?? "?"}: ${e.message}`))
   );
+  lastReport = report;
+  $("explain").hidden = report.ok;
+  $("explain").textContent = explain(rows, report);
+  $("final-hash").textContent = steps[last].commit.audit.resultHash;
+  for (const el of document.querySelectorAll("[data-fact]")) el.value = engine.facts[el.dataset.fact];
 
   // Outbox
   const stepOf = new Map(steps.map((s, i) => [s.commit.audit.transitionId, i]));
@@ -247,12 +256,93 @@ async function render() {
           : []))
     )
   );
+  await syncUrl();
+}
+
+// What the hash table means when something does not match.
+function explain(rows, report) {
+  if (report.ok) return "";
+  const broken = rows.filter((r) => !r.match).map((r) => r.field);
+  if (broken.includes("resultHash")) {
+    return "This step's recorded output was changed after it was written: its resultHash no longer matches its contents.";
+  }
+  if (broken.length > 0) {
+    return `The recorded outputs are untouched, but the recorded inputs no longer produce them (${broken.join(", ")}). An input was edited after the decision was made, and replay on the kernel disagrees too.`;
+  }
+  const first = report.errors.find((e) => Number.isInteger(e.stepIndex));
+  return first
+    ? `This step's own hashes match. The history breaks at step ${first.stepIndex}; everything after it no longer replays.`
+    : "The bundle does not verify; see the errors below.";
+}
+
+// Keep the address bar a replay link for the current run.
+async function syncUrl() {
+  const fresh = engine.attempts.length === 0 && engine.tamperAt === null;
+  const fragment = fresh
+    ? engine.preset.key
+    : `r=${await encodeLink({ preset: engine.preset, attempts: engine.attempts, tamper: engine.tamperAt, at: follow ? null : sel })}`;
+  shareUrl = `${location.origin}${location.pathname}#${fragment}`;
+  history.replaceState(null, "", `${location.pathname}${location.search}#${fragment}`);
+}
+
+// Open whatever the address asks for: a replay link (#r=…), a preset (#guardrail or
+// ?preset=guardrail), or the first preset.
+async function openFromLocation() {
+  const hash = location.hash.slice(1);
+  if (hash.startsWith("r=")) {
+    try {
+      const link = await decodeLink(hash.slice(2), PRESETS);
+      await loadPreset(link.preset.key);
+      await engine.replay(link.attempts);
+      if (link.tamper !== null && link.tamper < engine.stepCount) engine.setTamper(link.tamper);
+      if (link.at !== null && link.at < engine.stepCount - 1) {
+        sel = link.at;
+        follow = false;
+      }
+      $("last").style.color = "";
+      $("last").textContent = `Replayed a shared run: ${engine.attempts.length} events, ${engine.stepCount} steps, computed here in your browser.`;
+      return;
+    } catch (err) {
+      $("last").style.color = "var(--bad)";
+      $("last").textContent = `This replay link could not be read (${err.message}). Showing a fresh preset instead.`;
+    }
+  }
+  const wanted = [hash, new URLSearchParams(location.search).get("preset")];
+  await loadPreset(wanted.find((k) => PRESETS.some((p) => p.key === k)) ?? PRESETS[0].key);
+}
+
+async function copy(text, what) {
+  const fallback = $("share-fallback");
+  try {
+    await navigator.clipboard.writeText(text);
+    fallback.hidden = true;
+    $("share-note").textContent = `${what} copied to the clipboard.`;
+  } catch {
+    fallback.value = text;
+    fallback.hidden = false;
+    fallback.select();
+    $("share-note").textContent = `Copy the ${what.toLowerCase()} below.`;
+  }
+}
+
+function receipt() {
+  const n = lastReport?.totalStepsVerified ?? engine.stepCount;
+  const verdict = lastReport?.ok ? "PASS (WASM replay and pure-JS spec hashes)" : "HASH MISMATCH";
+  return [
+    `MO·WA OS Playground · ${engine.preset.title}`,
+    `${n} step${n === 1 ? "" : "s"} · ${verdict}`,
+    `Final resultHash ${$("final-hash").textContent}`,
+    `Replay it: ${shareUrl}`,
+  ].join("\n");
 }
 
 // ---- wiring ------------------------------------------------------------------------
 
 $("preset").replaceChildren(...PRESETS.map((p) => h("option", { value: p.key }, p.title)));
 $("preset").addEventListener("change", (e) => run(() => loadPreset(e.target.value)));
+window.addEventListener("hashchange", () => run(openFromLocation));
+$("copy-link").addEventListener("click", () => run(() => copy(shareUrl, "Replay link")));
+$("copy-receipt").addEventListener("click", () => run(() => copy(receipt(), "Receipt")));
 $("actor").addEventListener("change", () => run(() => {}));
 $("scrub").addEventListener("input", (e) =>
   run(async () => {
@@ -282,9 +372,7 @@ $("export").addEventListener("click", () =>
 );
 $("version").textContent = `Kernel ${kernel.kernelVersion()}`;
 
-const initial = PRESETS.some((p) => p.key === location.hash.slice(1)) ? location.hash.slice(1) : PRESETS[0].key;
-$("preset").value = initial;
-await run(() => loadPreset(initial));
+await run(openFromLocation);
 
 if (new URLSearchParams(location.search).has("selftest")) {
   const { selftest } = await import("./selftest.js");

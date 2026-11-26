@@ -34,7 +34,8 @@ The [playground](https://mowaos.github.io/mowa-kernel/) runs three example flows
 real kernel, entirely in the page: a coffee machine, a two-phase approval and an AI
 tool-calling guardrail. Act as different actors, step back through every decision,
 tamper with a step and watch both verification engines catch it, then download the
-bundle and check it with `npx @mowaos/verify`. To run it locally, build the packages
+bundle and check it with `npx @mowaos/verify`. Every run is a link: send it, and
+the other person's browser replays it to the same hashes. To run it locally, build the packages
 (`npm test` does), then `npm run playground`.
 
 ## Packages

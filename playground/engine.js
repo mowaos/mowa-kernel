@@ -18,6 +18,7 @@ export async function createEngine({ host: hostLib, verify, kernel, preset }) {
   let host;
   let steps = []; // { call, event, facts?, ctx } as fired, in order
   let refusals = [];
+  let attempts = []; // every fire, refused or not: { event, actor, facts, at }
   let tamperAt = null;
   let lastMs = null;
 
@@ -115,6 +116,10 @@ export async function createEngine({ host: hostLib, verify, kernel, preset }) {
     get refusals() {
       return refusals;
     },
+    /** Every event fired, refused ones included, with the facts it carried. */
+    get attempts() {
+      return attempts;
+    },
     get lastMs() {
       return lastMs;
     },
@@ -141,6 +146,7 @@ export async function createEngine({ host: hostLib, verify, kernel, preset }) {
     /** Fire an event with the current facts. Refusals are recorded, never committed. */
     async fire(type, actorType) {
       const n = steps.length;
+      attempts.push({ event: type, actor: actorType, facts: { ...facts }, at: n });
       const event = makeEvent(n, type, actorType);
       const step = {
         call: "advance",
@@ -172,8 +178,17 @@ export async function createEngine({ host: hostLib, verify, kernel, preset }) {
       for (const step of keep) await apply(step);
       steps = keep;
       refusals = refusals.filter((r) => r.at <= i);
+      attempts = attempts.filter((a) => a.at <= i);
       if (tamperAt !== null && tamperAt > i) tamperAt = null;
       cached = null;
+    },
+
+    /** Fire a list of attempts (from a replay link) with the facts each one carried. */
+    async replay(list) {
+      for (const a of list) {
+        Object.assign(facts, a.facts);
+        await this.fire(a.event, a.actor);
+      }
     },
 
     setTamper(i) {
