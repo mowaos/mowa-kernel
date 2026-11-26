@@ -26,6 +26,15 @@
   }
 }
 </script>
+<script>
+  // Self-test only (?selftest): report a page error at once instead of letting the
+  // test runner time out without a reason.
+  if (location.search.includes("selftest")) {
+    const report = (msg) => fetch("/result", { method: "POST", body: JSON.stringify({ ok: false, error: "page error: " + msg }) });
+    addEventListener("error", (e) => report(e.message || String(e.error)));
+    addEventListener("unhandledrejection", (e) => report(e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+  }
+</script>
 <script type="module" src="app.js"></script>
 </head>
 <body>

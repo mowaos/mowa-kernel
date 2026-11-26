@@ -4,7 +4,17 @@
 import { PRESETS } from "./presets.js";
 
 const $ = (id) => document.getElementById(id);
-const idle = () => window.__busy;
+let stepName = "start";
+// Every wait has its own deadline, so a stall names the step it happened in.
+const idle = () =>
+  Promise.race([
+    window.__busy,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`stalled waiting at: ${stepName}`)), 20_000)),
+  ]);
+function progress(name) {
+  stepName = name;
+  fetch("/progress", { method: "POST", body: name }).catch(() => {});
+}
 
 function set(el, value, type = "change") {
   el.value = value;
@@ -19,7 +29,9 @@ export async function selftest() {
   const log = [];
   try {
     // A newcomer's path: only the guide's "Do it for me" button, start to finish.
+    progress("guide walk");
     for (const preset of PRESETS) {
+      progress(`guide walk: ${preset.key}`);
       set($("preset"), preset.key);
       await idle();
       if (!document.querySelector('[data-guide="do"]')) {
@@ -38,6 +50,7 @@ export async function selftest() {
     }
     log.push("guide: every preset walked with Do it for me");
 
+    progress("off-path");
     // Going off the path is detected.
     set($("preset"), "coffee");
     await idle();
@@ -52,6 +65,7 @@ export async function selftest() {
       set($("preset"), preset.key);
       await idle();
       for (const step of preset.demo) {
+        progress(`${preset.key}: ${step.event} as ${step.actor}`);
         for (const [name, status] of Object.entries(step.facts ?? {})) {
           set(document.querySelector(`[data-fact="${name}"]`), status);
         }
@@ -66,6 +80,7 @@ export async function selftest() {
         else check(last.startsWith("Committed"), `${preset.key}: ${step.event} → ${last}`);
         check($("badge").textContent.startsWith("PASS"), `${preset.key}: badge ${$("badge").textContent}`);
       }
+      progress(`${preset.key}: tamper and rewind`);
       const steps = Number($("scrub").max) + 1;
 
       // Tamper with step 1, see both the badge and the matrix turn, then undo.
@@ -88,6 +103,7 @@ export async function selftest() {
       log.push(`${preset.key}: ${steps} steps, tamper caught, rewind ok`);
     }
 
+    progress("approval: confirm");
     // The approval preset leaves its action waiting for a person.
     set($("preset"), "approval");
     await idle();
@@ -109,6 +125,7 @@ export async function selftest() {
     check(!document.querySelector("#outbox [data-confirm]"), "approval: still awaiting confirmation");
     log.push("approval: AWAIT_CONFIRMATION confirmed");
 
+    progress("replay link");
     // The address bar is a replay link: open another preset, then come back through it.
     const link = location.hash;
     const final = $("final-hash").textContent;

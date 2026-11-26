@@ -60,8 +60,19 @@ const types = {
 
 let resolveResult;
 const result = new Promise((r) => (resolveResult = r));
+// What the test runner can report if the page never answers.
+const served = new Set();
+let progress = "none";
 
 const server = createServer((req, res) => {
+  if (args.has("--test") && req.method === "POST" && req.url === "/progress") {
+    let body = "";
+    req.on("data", (d) => (body += d)).on("end", () => {
+      progress = body.slice(0, 300);
+      res.writeHead(204).end();
+    });
+    return;
+  }
   if (args.has("--test") && req.method === "POST" && req.url === "/result") {
     let body = "";
     req.on("data", (d) => (body += d)).on("end", () => {
@@ -70,6 +81,7 @@ const server = createServer((req, res) => {
     });
     return;
   }
+  served.add(new URL(req.url, "http://x").pathname);
   let path = normalize(join(site, decodeURIComponent(new URL(req.url, "http://x").pathname)));
   if (path === site || path === site + sep) path = join(site, "index.html");
   try {
@@ -100,14 +112,33 @@ if (!args.has("--test")) {
   // Reuse one profile under target/: headless Chrome leaves helpers that block removal.
   const profile = join(repo, "target", "playground", "chrome-profile");
   mkdirSync(profile, { recursive: true });
-  const chrome = spawn(
-    bin,
-    ["--headless=new", "--disable-gpu", "--no-first-run", `--user-data-dir=${profile}`, `${url}?selftest`],
-    { stdio: "ignore" }
-  );
-  const timer = setTimeout(() => resolveResult({ ok: false, error: "timed out after 60 s" }), 60_000);
+  let chromeErr = "";
+  let chrome;
+  const launch = () => {
+    chrome = spawn(
+      bin,
+      ["--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", `--user-data-dir=${profile}`, `${url}?selftest`],
+      { stdio: ["ignore", "ignore", "pipe"] }
+    );
+    chrome.stderr.on("data", (d) => (chromeErr = (chromeErr + d).slice(-2000)));
+    chrome.once("exit", (code) => {
+      if (code !== null && code !== 0) resolveResult({ ok: false, error: `Chrome exited with code ${code}` });
+    });
+  };
+  launch();
+  // Chrome occasionally fails to open the page on a cold CI runner: retry the launch once.
+  const retry = setTimeout(() => {
+    if (served.size > 0) return;
+    console.error("Chrome did not request the page within 20 s; relaunching once.");
+    chrome.removeAllListeners("exit");
+    chrome.kill();
+    launch();
+  }, 20_000);
+  const timer = setTimeout(() => resolveResult({ ok: false, error: "timed out after 120 s" }), 120_000);
   const out = await result;
   clearTimeout(timer);
+  clearTimeout(retry);
+  chrome.removeAllListeners("exit");
   if (chrome.exitCode === null) {
     const exited = new Promise((r) => chrome.once("exit", r));
     chrome.kill();
@@ -117,6 +148,9 @@ if (!args.has("--test")) {
   for (const line of out.log ?? []) console.log(`ok  ${line}`);
   if (!out.ok) {
     console.error(`Playground self-test failed: ${out.error}`);
+    console.error(`  last step reported: ${progress}`);
+    console.error(`  files served: ${served.size ? [...served].join(" ") : "none (the page never loaded)"}`);
+    if (chromeErr.trim()) console.error(`  Chrome said:\n${chromeErr.trim()}`);
     process.exit(1);
   }
   console.log(`Playground self-test passed in headless Chrome (${out.kernel}).`);
