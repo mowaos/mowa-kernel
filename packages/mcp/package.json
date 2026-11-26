@@ -1,0 +1,52 @@
+{
+  "name": "@mowaos/mcp",
+  "version": "0.5.1",
+  "type": "module",
+  "description": "MCP server that puts the MO·WA OS kernel in front of an AI agent: the agent proposes, the flow decides, a person approves",
+  "author": "Bruce Gardiner (ScrAtcH)",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "mowa-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "dependencies": {
+    "@mowaos/host-browser": "0.5.1",
+    "@mowaos/kernel": "0.5.1"
+  },
+  "scripts": {
+    "build": "tsc",
+    "pretest": "npm run build",
+    "test": "node --test tests/mcp.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mowaos/mowa-kernel.git",
+    "directory": "packages/mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "guardrails",
+    "workflow",
+    "audit",
+    "deterministic"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  }
+}

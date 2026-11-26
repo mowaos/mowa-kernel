@@ -21,9 +21,12 @@
     "build:kernel": "npm --prefix packages/kernel run build",
     "bench": "node bench/run-node.mjs && cargo run --release -q -p mowa-wasm --example bench -- target/bench/fixtures.json",
     "bench:browser": "node bench/run-browser.mjs",
+    "link": "npm install --no-package-lock --offline --ignore-scripts --no-audit --no-fund",
+    "test:mcp": "npm run link && npm --prefix packages/mcp test",
+    "build:mcp": "npm --prefix packages/mcp run build",
     "test:playground": "node --test playground/tests/presets.test.mjs playground/tests/link.test.mjs",
     "playground": "node scripts/playground.mjs",
-    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel && npm run test:playground"
+    "test": "npm run test:rust && npm run test:wasm && npm run test:host && npm run test:verify && npm run test:kernel && npm run test:mcp && npm run test:playground"
   },
   "repository": {
     "type": "git",

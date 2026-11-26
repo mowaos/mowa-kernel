@@ -1,0 +1,48 @@
+{
+  "id": "example.agent-tool-guardrail",
+  "version": "1",
+  "status": "ACTIVE",
+  "description": "An agent proposes a tool call; host policy checks it; a person approves before it runs.",
+  "startNode": "waiting",
+  "startActors": ["AI", "HUMAN"],
+  "declaredFacts": {
+    "policy:allowlist": ["PASS", "FAIL"],
+    "policy:budget": ["PASS", "FAIL"]
+  },
+  "nodes": {
+    "waiting": {
+      "id": "waiting", "type": "intake", "tier": "T1",
+      "transitions": {
+        "PROPOSE_TOOL_CALL": {
+          "to": "proposed",
+          "allowedActors": ["AI"],
+          "guard": { "op": "none_with_status", "prefix": "policy:", "status": "FAIL" },
+          "onGuardFail": "blocked"
+        },
+        "CLOSE": { "to": "closed", "allowedActors": ["HUMAN"] }
+      }
+    },
+    "proposed": {
+      "id": "proposed", "type": "approval", "tier": "T2",
+      "transitions": {
+        "APPROVE_CALL": { "to": "executed", "allowedActors": ["HUMAN"] },
+        "REJECT_CALL": { "to": "waiting", "allowedActors": ["HUMAN"] },
+        "WITHDRAW": { "to": "waiting", "allowedActors": ["AI"] }
+      }
+    },
+    "blocked": {
+      "id": "blocked", "type": "review", "tier": "T2",
+      "onEnter": [{ "kind": "flag_for_review", "payload": { "reason": "policy" } }],
+      "transitions": { "DISMISS": { "to": "waiting", "allowedActors": ["HUMAN"] } }
+    },
+    "executed": {
+      "id": "executed", "type": "action", "tier": "T0",
+      "onEnter": [{ "kind": "call_tool", "payload": { "approved": true } }],
+      "transitions": {
+        "REPORT_RESULT": { "to": "waiting", "allowedActors": ["AI"] }
+      }
+    },
+    "closed": { "id": "closed", "type": "outcome", "tier": "T0", "terminal": true }
+  },
+  "effectiveFrom": 0
+}

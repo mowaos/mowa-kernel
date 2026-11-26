@@ -50,6 +50,7 @@ the other person's browser replays it to the same hashes. To run it locally, bui
 | [`@mowaos/kernel`](packages/kernel) | The kernel as one npm package for Node and browsers; no Rust or `wasm-bindgen` needed |
 | [`@mowaos/host-browser`](packages/host-browser) | Browser host: IndexedDB storage, Web Locks, outbox with human confirmation |
 | [`@mowaos/verify`](packages/verify) | Offline verifier for exported decision histories: `npx @mowaos/verify bundle.json` |
+| [`@mowaos/mcp`](packages/mcp) | MCP server for AI agents: the agent proposes, the flow decides, a person approves (2026-07-28 and earlier clients) |
 
 ## Quick start
 

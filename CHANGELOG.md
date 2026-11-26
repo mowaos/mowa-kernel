@@ -6,6 +6,26 @@ the JSON contract or a hash formula, and the entry will say so.
 
 ## Unreleased
 
+- **New package `@mowaos/mcp`:** an MCP server that puts the kernel in front of an AI
+  agent, following the host contract's rules for agents (section 7). The agent gets
+  five tools (`mowa_list_cases`, `mowa_start_case`, `mowa_list_actions`,
+  `mowa_propose`, `mowa_get_case`) and always acts as actor type `AI`. It cannot
+  approve, confirm effects, supply facts or choose its actor. Facts come from a file
+  the host controls; effects wait in `AWAIT_CONFIRMATION` until a person confirms them
+  with `mowa-mcp confirm`, which returns a receipt. `mowa_propose` takes an `expect`
+  token (the case's latest `resultHash`): a move on a stale view, or a retried one, is
+  refused as `STALE`. People review and act from the same CLI (`cases`, `show`, `act`,
+  `confirm`, `reject`, `export`). Read-only resources serve each case and its
+  verification bundle. W3C `traceparent` from the request is stored with the step,
+  outside the hashes. Storage is SQLite through `node:sqlite`, safe for the server and
+  review commands to share. The protocol is implemented without an SDK and is
+  dual-era: MCP 2026-07-28 (`server/discover`, per-request metadata) plus the
+  `initialize` handshake of 2025-11-25, 2025-06-18 and 2025-03-26 clients. Needs
+  Node 22.13 or later. Tested over real stdio, with a person acting from a second
+  process and the exported bundle checked by `@mowaos/verify`, and checked against the
+  official MCP Inspector.
+- The public gate now also checks `@mowaos/mcp`'s version and that npm packages pin
+  `@mowaos/*` dependencies to the release version exactly.
 - **`@mowaos/verify` runs in browsers.** The same `verifyBundle` API works in Vite,
   webpack and plain browsers; pass the kernel with
   `{ wasm: await loadKernel() }` from `@mowaos/kernel`. In Node, hashing still uses

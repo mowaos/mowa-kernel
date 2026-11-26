@@ -52,7 +52,15 @@ root_v=$(node -p 'require("./package.json").version')
 host_v=$(node -p 'require("./packages/host-browser/package.json").version')
 verify_v=$(node -p 'require("./packages/verify/package.json").version')
 kernel_v=$(node -p 'require("./packages/kernel/package.json").version')
-[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] && [ "$cargo_v" = "$verify_v" ] && [ "$cargo_v" = "$kernel_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v, verify $verify_v, kernel $kernel_v"
+mcp_v=$(node -p 'require("./packages/mcp/package.json").version')
+[ "$cargo_v" = "$root_v" ] && [ "$cargo_v" = "$host_v" ] && [ "$cargo_v" = "$verify_v" ] && [ "$cargo_v" = "$kernel_v" ] && [ "$cargo_v" = "$mcp_v" ] || err "versions differ: Cargo $cargo_v, root $root_v, host $host_v, verify $verify_v, kernel $kernel_v, mcp $mcp_v"
+bad_npm=$(node -e '
+  const v = process.argv[1];
+  for (const p of require("fs").readdirSync("packages")) {
+    const deps = require(`./packages/${p}/package.json`).dependencies ?? {};
+    for (const [name, want] of Object.entries(deps)) if (name.startsWith("@mowaos/") && want !== v) console.log(`${p}: ${name}@${want}`);
+  }' "$cargo_v")
+[ -z "$bad_npm" ] || err "npm packages must pin @mowaos/* to exactly $cargo_v: $bad_npm"
 bad_pins=$(grep -E '^mowa-[a-z]+ = \{ path = ' Cargo.toml | grep -v "version = \"=$cargo_v\"" || true)
 [ -z "$bad_pins" ] || err "workspace crate pins do not match $cargo_v: $bad_pins"
 if [ -n "${1:-}" ] && [ "$1" != "v$cargo_v" ]; then err "tag $1 does not match version v$cargo_v"; fi
