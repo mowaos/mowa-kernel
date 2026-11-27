@@ -36,6 +36,12 @@ bash scripts/check-public.sh
   pull request, and say so in the description.
 - **Determinism.** No wall-clock time, randomness, floats or hash maps in the kernel
   crates; the lint rules enforce this.
+- **Caching flows.** `flowHash` leaves out the lifecycle fields (`status`,
+  `effectiveFrom`, `effectiveTo`), so a cache of validated flows must key on them too.
+  Otherwise a deprecated flow and its active version would share an entry.
+- **Versions.** `kernelVersion` is part of every `resultHash`, so any version bump
+  changes all result hashes even when no decision changes. Releases follow
+  [docs/releasing.md](docs/releasing.md).
 
 ## Security issues
 
