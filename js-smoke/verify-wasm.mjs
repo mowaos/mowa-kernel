@@ -187,7 +187,8 @@ test("6. benchmark: flowHandle avoids re-parsing & hashing overhead", () => {
   // Verify functional parity
   assert.equal(JSON.stringify(fullCommit), JSON.stringify(cachedCommit));
 
-  console.log(`\n    ⚡ Benchmark (500 transitions):`);
+  console.log(`\n    Smoke timing, flow handle vs full flow (500 advances in Node, JSON round trips included).`);
+  console.log(`    Not the published figure: see \`npm run bench\` and docs/benchmarks.md.`);
   console.log(`       Full Flow Parsing : ${fullDuration.toFixed(2)} ms (${(fullDuration / iterations * 1000).toFixed(1)} µs/op)`);
   console.log(`       Cached flowHandle : ${cachedDuration.toFixed(2)} ms (${(cachedDuration / iterations * 1000).toFixed(1)} µs/op)`);
   console.log(`       Speedup           : ${(fullDuration / cachedDuration).toFixed(2)}x faster\n`);

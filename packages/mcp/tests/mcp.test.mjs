@@ -263,6 +263,12 @@ describe("an agent and a person on one case", () => {
 
 describe("storage", () => {
   it("two writers racing on one case: exactly one commits, the other gets STALE", async () => {
+    // Same filter as the CLI: node:sqlite's "experimental" warning is noise in the test log.
+    const emit = process.emitWarning;
+    process.emitWarning = (w, ...rest) => {
+      if (String(w instanceof Error ? w.message : w).includes("SQLite")) return;
+      emit.call(process, w, ...rest);
+    };
     const { DatabaseSync } = await import("node:sqlite");
     const { loadKernel } = await import("@mowaos/kernel");
     const { AgentHost } = await import("../dist/index.js");
