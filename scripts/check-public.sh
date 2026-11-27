@@ -12,6 +12,12 @@ err() { echo "FAIL: $*" >&2; fail=1; }
 
 files=$(git ls-files)
 
+# The checks below scan tracked files only. New, untracked files in a crate or package
+# would be skipped, so the gate fails until they are added (or removed). Ignored build
+# output does not count.
+untracked=$(git ls-files --others --exclude-standard -- crates packages)
+[ -z "$untracked" ] || { echo "$untracked"; err "untracked files in crates/ or packages/ are not scanned: add or remove them"; }
+
 # 1. Required files.
 for f in LICENSE NOTICE README.md SECURITY.md TRADEMARKS.md CHANGELOG.md docs/hashing-spec.md \
   docs/flow-spec.md docs/kernel-spec.md docs/host-contract.md docs/schemas/flow.schema.json; do
