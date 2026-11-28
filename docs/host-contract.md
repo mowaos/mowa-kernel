@@ -271,8 +271,13 @@ Known limits in 0.5.x:
 
 ## 9. Conformance
 
-The browser host's behaviour is tested in `packages/host-browser/tests/host.test.mjs`
-(atomic commit, serialised concurrent calls, duplicate requests and key reuse, guard
-fallback, outbox states and confirmation, unhandled effect kinds, flow handle
-reloading, step records, and replaying an exported bundle to identical commits). A new host SHOULD pass equivalent tests, and MUST produce commits
-that verify under hashing-spec.md, section 6.
+The host's behaviour is tested by one shared suite,
+`packages/host-browser/tests/host-suite.mjs`: atomic commit, refusal of a commit decided
+on a stale session version, serialised concurrent calls, duplicate requests and key
+reuse, guard fallback, outbox states and confirmation, unhandled effect kinds, flow
+handle reloading, step records, and replaying an exported bundle to identical commits.
+It runs on every storage adapter in this repository: `MemoryStorage`
+(`host-browser`) and `SqliteStorage` (`@mowaos/mcp`, which also tests rollback of a
+commit that fails part-way and reopening a database). A new storage adapter SHOULD pass
+the suite unchanged. A host built some other way SHOULD pass equivalent tests, and MUST
+produce commits that verify under hashing-spec.md, section 6.

@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsc",
     "pretest": "npm run build",
-    "test": "node --test tests/mcp.test.mjs"
+    "test": "node --test tests/mcp.test.mjs tests/host-conformance.test.mjs"
   },
   "repository": {
     "type": "git",

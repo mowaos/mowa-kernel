@@ -4,6 +4,20 @@ All notable changes are listed here, newest first. The project follows
 [Semantic Versioning](https://semver.org/); before 1.0, a minor version may change
 the JSON contract or a hash formula, and the entry will say so.
 
+## Unreleased
+
+Tests only; the kernel and packages are unchanged.
+
+- **The spec vectors also run against the native build.** `cargo test` now runs
+  `docs/vectors/` through the same JSON entry points the WASM build exports
+  (`crates/mowa-wasm/tests/vectors.rs`), so a host that links the Rust crates directly
+  is held to the same decisions.
+- **One host conformance suite for every storage adapter.** The browser host's tests
+  are now a shared suite (`packages/host-browser/tests/host-suite.mjs`) that runs on
+  `MemoryStorage` and on `@mowaos/mcp`'s `SqliteStorage`. New cases: a commit decided on
+  a stale session version is refused and writes nothing; on SQLite, a commit that fails
+  part-way rolls back completely, and a reopened database carries on where it stopped.
+
 ## 0.5.2 (2026-11-26)
 
 New packages and tools; decisions are unchanged. Every `flowHash`, `decisionHash`,
