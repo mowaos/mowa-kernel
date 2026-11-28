@@ -298,4 +298,6 @@ An implementation conforms to this specification if it passes every case in
 change (`js-smoke/verify-conformance.mjs`, `js-smoke/verify-spec.mjs`); for every
 successful step it also recomputes each hash with an independent JavaScript
 implementation of hashing-spec.md (`js-smoke/spec-lib.mjs`) that shares no code with
-the kernel.
+the kernel. The same vectors, with `vectors/flow-validation.json`, also run against the
+native build (`crates/mowa-wasm/tests/vectors.rs`, part of `cargo test`), so a host that
+links the Rust crates directly reaches the same decisions as one that loads the WASM.
